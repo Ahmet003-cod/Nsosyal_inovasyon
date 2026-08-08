@@ -44,8 +44,8 @@ Sistemi yerel bilgisayarınızda çalıştırmak için aşağıdaki yazılımlar
 
 ### Adım 1: Projeyi Bilgisayarınıza Klonlayın
 ```bash
-git clone https://github.com/kullanici-adiniz/site_devam.git
-cd site_devam
+git clone https://github.com/Ahmet003-cod/Nsosyal_inovasyon.git
+cd Nsosyal_inovasyon
 ```
 
 ### Adım 2: Node.js Bağımlılıklarını Yükleyin
@@ -60,12 +60,12 @@ pip install python-docx
 ```
 
 ### Adım 4: Ortam Değişkenlerini (`.env`) Yapılandırın
-Ana dizinde bulunan `.env` dosyasını bir metin düzenleyici ile açın ve API anahtarlarınızı tanımlayın:
+Ana dizinde bulunan `.env` dosyasını bir metin düzenleyici ile açın ve kendi API anahtarlarınızı tanımlayın:
 
 ```env
 PORT=3005
 OPENAI_API_KEY=your_openai_api_key_here
-SERPER_API_KEY=3dd55b333f20f9276492d83e1fabac33d9419a2b
+SERPER_API_KEY=your_serper_api_key_here
 GMAIL_USER=demo@gmail.com
 GMAIL_PASS=demo_password
 ```
