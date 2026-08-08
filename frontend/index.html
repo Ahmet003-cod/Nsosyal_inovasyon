@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NSosyal | Güvenli, Yapay Zekâ Destekli & MCP İnovasyon Platformu</title>
+  <meta name="description" content="TEKNOFEST 2026 Sosyal İnovasyon Yarışması - Yapay Zekâ Agent'ı ve MCP Protokolü ile Güvenli Medya Ekosistemi">
+  
+  <!-- Font Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- APP CONTAINER -->
+  <div id="app-layout" class="app-layout">
+    
+    <!-- LEFT SIDEBAR / NAVIGATION -->
+    <aside class="sidebar-left">
+      <div class="brand-logo" onclick="switchView('feed')">
+        <div class="logo-icon">N</div>
+        <div class="logo-text">
+          <span class="brand-name">NSosyal</span>
+          <span class="brand-badge">TEKNOFEST 2026</span>
+        </div>
+      </div>
+
+      <nav class="nav-menu">
+        <button class="nav-item active" id="nav-home" onclick="switchView('feed')">
+          <span class="nav-icon">🏠</span>
+          <span class="nav-label">Ana Sayfa & Akış</span>
+        </button>
+
+        <button class="nav-item" id="nav-jobs" onclick="switchView('jobs')">
+          <span class="nav-icon">💼</span>
+          <span class="nav-label">İş & Kariyer Portalı</span>
+          <span class="nav-counter-badge">12 İlan</span>
+        </button>
+
+        <button class="nav-item" id="nav-reports" onclick="switchView('reports')">
+          <span class="nav-icon">📬</span>
+          <span class="nav-label">Postlarım & Raporlarım</span>
+          <span class="nav-counter-badge" style="background: rgba(16, 185, 129, 0.2); color: #10B981;">Zamanlanmış</span>
+        </button>
+
+        <button class="nav-item" onclick="filterCategory('teknoloji')">
+          <span class="nav-icon">🤖</span>
+          <span class="nav-label">Teknoloji & AI</span>
+        </button>
+
+        <button class="nav-item" onclick="filterCategory('gündem')">
+          <span class="nav-icon">🔥</span>
+          <span class="nav-label">Gündem Haberleri</span>
+        </button>
+
+        <button class="nav-item" onclick="filterCategory('ekonomi')">
+          <span class="nav-icon">📈</span>
+          <span class="nav-label">Ekonomi & Finans</span>
+        </button>
+
+        <button class="nav-item" onclick="filterSavedPosts()">
+          <span class="nav-icon">🔖</span>
+          <span class="nav-label">Kaydedilenler</span>
+        </button>
+      </nav>
+
+      <div class="sidebar-action-box">
+        <button class="primary-post-btn" onclick="openAddPostModal()">
+          <span>✨</span> Haber / Gönderi Ekle
+        </button>
+        <button class="secondary-post-btn" onclick="openAddJobModal()" style="margin-top: 8px; width: 100%;">
+          <span>💼</span> İş İlanı Yayınla
+        </button>
+      </div>
+
+      <div class="user-profile-mini">
+        <div class="user-avatar">NH</div>
+        <div class="user-info">
+          <div class="user-name">NHaber Son Dakika</div>
+          <div class="user-handle">@nhaber_19</div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- MAIN CONTENT AREA -->
+    <main class="main-content">
+      
+      <!-- TOP HEADER / SEARCH -->
+      <header class="top-header">
+        <div class="header-left">
+          <div class="global-search-bar">
+            <span class="search-icon">🔍</span>
+            <input type="text" id="global-search-input" placeholder="Haber, etiket veya iddia ara..." onkeydown="handleGlobalSearch(event)">
+          </div>
+        </div>
+
+        <div class="header-right">
+          <button class="header-btn ai-toggle-btn" onclick="toggleAIPanel()" title="AI Asistan Paneli">
+            <span>🤖</span>
+            <span>AI Fact-Check</span>
+          </button>
+        </div>
+      </header>
+
+      <!-- VIEW 1: FEED VIEW (MAIN SOCIAL FEED) -->
+      <div id="feed-view" class="view-panel active">
+        
+        <!-- COMPOSER CARD -->
+        <div class="composer-card">
+          <div class="composer-header">
+            <div class="user-avatar small">NH</div>
+            <textarea id="composer-text" placeholder="Ne düşünüyorsunuz? Bir haber, iddia veya düşünce paylaşın... (AI Otomatik Teyit Eder)"></textarea>
+          </div>
+
+          <!-- HIDDEN LOCAL FILE INPUT FOR IMAGE UPLOAD -->
+          <input type="file" id="composer-file-input" accept="image/*" style="display: none;" onchange="handleComposerFileSelect(event)">
+
+          <!-- IMAGE PREVIEW CONTAINER -->
+          <div id="composer-image-preview" class="composer-image-preview hidden">
+            <img id="composer-preview-img" src="" alt="Yüklenen Görsel">
+            <button class="remove-preview-btn" onclick="removeComposerImage()">✕</button>
+          </div>
+
+          <!-- DETECTED LINK PREVIEW -->
+          <div id="composer-link-preview" class="link-preview-box hidden">
+            <div class="preview-badge">🔗 Tespit Edilen Bağlantı:</div>
+            <div class="preview-url" id="detected-url">https://example.com</div>
+          </div>
+
+          <div class="composer-footer">
+            <div class="composer-tools">
+              <button class="tool-icon-btn" title="Bilgisayarımdan Fotoğraf Seç" onclick="addComposerImage()">
+                🖼️
+              </button>
+              <button class="tool-icon-btn" title="Gündem İddiası Ekle" onclick="appendComposerEmoji('🔥')">
+                🔥
+              </button>
+              <button class="tool-icon-btn" title="Teknoloji Haberi" onclick="appendComposerEmoji('🤖')">
+                🤖
+              </button>
+              <button class="tool-icon-btn" title="AI Fact-Check Sorgula" onclick="askFactCheckFromComposer()">
+                🤖 Teyit Et
+              </button>
+            </div>
+
+            <button class="publish-btn" onclick="handlePostSubmit()">
+              Paylaş & Taramadan Geçir
+            </button>
+          </div>
+        </div>
+
+        <!-- FEED TABS & MODES -->
+        <div class="feed-filter-bar">
+          <div class="feed-tabs">
+            <button class="feed-tab active" id="tab-flow" onclick="switchFeedTab('flow')">Tüm Akış</button>
+            <button class="feed-tab" id="tab-media" onclick="switchFeedTab('media')">Görsel Medya</button>
+          </div>
+
+          <div class="feed-options">
+            <div class="toggle-container" onclick="toggleMediaMode()">
+              <span class="toggle-label">Görsel Medya:</span>
+              <div class="toggle-switch on" id="media-toggle-switch"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- POSTS FEED CONTAINER -->
+        <div id="posts-container" class="posts-container">
+          <!-- Posts rendered dynamically by app.js -->
+        </div>
+      </div>
+
+      <!-- VIEW 2: JOBS & CAREER PORTAL -->
+      <div id="jobs-view" class="view-panel">
+        <div class="jobs-hero">
+          <div class="hero-content">
+            <h2>💼 NSosyal Akıllı İş & Kariyer Portalı</h2>
+            <p>TEKNOFEST ve İnovasyon ekosistemindeki en güncel teknoloji, yapay zekâ ve siber güvenlik ilanları.</p>
+            
+            <div class="jobs-search-box">
+              <input type="text" id="jobs-search-input" placeholder="Pozisyon, şirket veya yetenek ara (Örn: Python, React, NLP)..." oninput="handleJobSearch()">
+              <button onclick="handleJobSearch()">İlan Ara</button>
+            </div>
+
+            <div class="jobs-hero-actions" style="margin-top: 12px; display: flex; gap: 10px;">
+              <button class="primary-post-btn" onclick="openAddJobModal()">+ Yeni İş İlanı Yayınla</button>
+              <button class="secondary-post-btn" onclick="openJobAlertModal()">🔔 Bu Pozisyona İş Alarmı Kur</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="job-filters-bar">
+          <button class="filter-chip active" onclick="filterJobs('hepsi', this)">Tüm İlanlar</button>
+          <button class="filter-chip" onclick="filterJobs('yapay-zeka', this)">Yapay Zekâ & NLP</button>
+          <button class="filter-chip" onclick="filterJobs('yazılım', this)">Yazılım & Web</button>
+          <button class="filter-chip" onclick="filterJobs('siber-guvenlik', this)">Siber Güvenlik</button>
+          <button class="filter-chip" onclick="filterJobs('tasarim', this)">UI/UX Tasarım</button>
+        </div>
+
+        <div id="jobs-list-container" class="jobs-list-container">
+          <!-- Job listings rendered dynamically by app.js -->
+        </div>
+      </div>
+
+      <!-- VIEW 3: POSTLARIM & ZAMANLANMIŞ OTOMATİK RAPORLAR PORTALI -->
+      <div id="reports-view" class="view-panel">
+        <div class="jobs-hero" style="background: linear-gradient(135deg, rgba(5,150,105,0.15), rgba(37,99,235,0.15));">
+          <div class="hero-content">
+            <h2>📬 Postlarım & Zamanlanmış Otomatik Rapor Portalı</h2>
+            <p>E-Posta beklemeksizin, seçtiğiniz zaman döngüsünde (Her Saat, Her Gün) üretilen haber teyit ve doğrulama raporları anında bu panele düşer ve Word (.docx) olarak indirilebilir.</p>
+            
+            <form onsubmit="handleCreateUserReportSubmit(event)" style="margin-top: 16px; background: var(--bg-card); padding: 16px; border-radius: 12px; border: 1px solid var(--border);">
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                <div class="form-group">
+                  <label>Rapor Başlığı / Takip Konusu</label>
+                  <input type="text" id="report-title-input" class="form-control" placeholder="Örn: TEKNOFEST & Yapay Zekâ Gündem Raporu" required>
+                </div>
+                <div class="form-group">
+                  <label>Zamanlama Döngüsü (Frekans)</label>
+                  <select id="report-frequency-select" class="form-control">
+                    <option value="Her Saat Başı">⏰ Her Saat Başı</option>
+                    <option value="Her Gün (Saat 09:00)">📅 Her Gün (Saat 09:00)</option>
+                    <option value="Her Hafta Başı">🗓️ Her Hafta Başı</option>
+                    <option value="⚡ Anlık / Şimdi Çalıştır">⚡ Anlık / Şimdi Çalıştır</option>
+                  </select>
+                </div>
+              </div>
+              <button type="submit" class="btn-primary" style="width: 100%; margin-top: 8px; background: linear-gradient(135deg, #059669, #10B981);">
+                ⚡ Otomatik Raporlama Döngüsünü Başlat & Rapor Üret
+              </button>
+            </form>
+          </div>
+        </div>
+
+        <div style="padding: 16px 20px;">
+          <h3 style="font-size: 16px; font-weight: 700; margin-bottom: 12px; color: var(--text-main);">
+            📊 Oluşturulan Zamanlanmış Raporlar ve Doğrulama Çıktıları
+          </h3>
+          <div id="user-reports-container" class="user-reports-list">
+            <!-- User Reports rendered dynamically by app.js -->
+          </div>
+        </div>
+      </div>
+
+    </main>
+
+    <!-- RIGHT SIDEBAR (TRENDS & AI AGENT PANEL) -->
+    <aside class="sidebar-right">
+      
+      <!-- TRENDING HASHTAGS -->
+      <div class="widget-card">
+        <div class="widget-header">
+          <h3>📈 Gündemdeki Etiketler</h3>
+        </div>
+        <div id="trending-hashtags-container" class="trending-list">
+          <!-- Trends rendered by app.js -->
+        </div>
+      </div>
+
+      <!-- AI ASİSTAN PANELDEN HIZLI SORGULAR -->
+      <div class="widget-card ai-assistant-widget">
+        <div class="widget-header">
+          <h3>🤖 AI Fact-Check Agent</h3>
+          <span class="online-indicator">CANLI</span>
+        </div>
+        <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;">
+          Model Context Protocol (MCP) ve OpenAI LLM motoru 7/24 aktif çalışmaktadır.
+        </p>
+
+        <div class="quick-ai-actions">
+          <button class="quick-action-btn" onclick="sendQuickCommand('Akıştaki son haberleri özetle')">
+            ✨ Akışı Özetle
+          </button>
+          <button class="quick-action-btn" onclick="sendQuickCommand('Boğaziçi yapay zeka haberini doğrula')">
+            🔍 Haber Doğrula (50 Kaynak)
+          </button>
+          <button class="quick-action-btn" onclick="switchView('reports')">
+            📬 Postlarım & Zamanlanmış Raporlar
+          </button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- SLIDING AI FACT-CHECK DRAWER (RIGHT PANEL) -->
+    <div id="ai-panel" class="ai-drawer">
+      <div class="ai-drawer-header">
+        <div class="ai-drawer-title">
+          <span class="ai-drawer-avatar">🤖</span>
+          <div>
+            <div style="font-weight: 700;">Omni-Agent Fact-Check</div>
+            <div style="font-size: 11px; opacity: 0.8;">MCP v1.0 & OpenAI LLM Motoru</div>
+          </div>
+        </div>
+        <button class="close-drawer-btn" onclick="toggleAIPanel()">✕</button>
+      </div>
+
+      <div id="ai-messages-container" class="ai-messages-body">
+        <div class="message-bubble agent">
+          <div class="message-content">
+            👋 Merhaba! Ben NSosyal <strong>Omni-Agent Yapay Zekâ Asistanıyım</strong>.<br><br>
+            Sistemdeki haberleri <strong>Google Scholar, DergiPark, YÖK, Resmî Gazete, Teyit.org, Anadolu Ajansı, TRT Haber, BBC Türkçe, Habertürk ve Hürriyet</strong> dahil 50 farklı veritabanından çapraz doğrularım.<br><br>
+            Ayrıca akıştaki haberleri özetleyebilir veya zamanlanmış otomatik rapor oluşturabilirim. Nasıl yardımcı olabilirim?
+          </div>
+        </div>
+      </div>
+
+      <div class="ai-drawer-footer">
+        <div class="ai-input-wrapper">
+          <input type="text" id="ai-user-input" placeholder="Bir haber, iddia veya soru sorun..." onkeydown="handleAIInputKeyDown(event)">
+          <button id="ai-send-btn" onclick="handleAISendMessage()">Gönder</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- MODAL 1: PROFANITY WARNING MODAL -->
+  <div id="profanity-modal" class="modal-overlay">
+    <div class="modal-card warning-theme">
+      <div class="modal-header">
+        <span class="modal-icon">⚠️</span>
+        <h3>Uygunsuz İfade Uyarısı</h3>
+      </div>
+      <div class="modal-body">
+        <p>Gönderinizde veya yorumunuzda <strong>topluluk kurallarına aykırı</strong> argo ifadeler tespit edildi:</p>
+        <div id="detected-profanity-words" class="highlight-words-box">--</div>
+        <p style="font-size: 13px; color: var(--text-muted); margin-top: 10px;">
+          Metninizi düzenleyebilir veya yine de paylaşabilirsiniz (argo sözcükler otomatik sansürlenir: g***).
+        </p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" onclick="closeProfanityModal('edit')">✏️ Gönderiyi Düzenle</button>
+        <button class="btn-warning" onclick="closeProfanityModal('insist')">⚠️ Yine de Paylaş (Sansürlü)</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 2: SECURITY THREAT BLOCK MODAL -->
+  <div id="security-modal" class="modal-overlay">
+    <div class="modal-card danger-theme">
+      <div class="modal-header">
+        <span class="modal-icon">🛡️</span>
+        <h3>Siber Tehdit Engellendi!</h3>
+      </div>
+      <div class="modal-body">
+        <p>Gönderinizdeki bağlantı <strong>siber güvenlik taramasından (Phishing/Malware) geçemedi</strong> ve engellendi:</p>
+        <div id="security-threat-detail" class="threat-details-box">--</div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-danger" onclick="closeSecurityModal()">Anlaşıldı (Gönderiyi İptal Et)</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 3: ADD POST MODAL -->
+  <div id="add-post-modal" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>✨ Yeni Haber / Gönderi Yayınla</h3>
+        <button class="close-btn" onclick="closeAddPostModal()">✕</button>
+      </div>
+      <form onsubmit="handleCustomPostSubmit(event)">
+        <div class="modal-body">
+          <div class="form-group">
+            <label>Haber Kategorisi</label>
+            <select id="new-post-category" class="form-control">
+              <option value="gündem">Gündem Haberleri</option>
+              <option value="teknoloji">Teknoloji & Yapay Zekâ</option>
+              <option value="ekonomi">Ekonomi & Finans</option>
+              <option value="spor">Spor & Sağlık</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Haber / Metin İçeriği</label>
+            <textarea id="new-post-text" class="form-control" rows="4" placeholder="Haber metnini veya iddianızı detaylıca yazın..." required></textarea>
+          </div>
+
+          <div class="form-group">
+            <label>Resmî Kaynak / Makale Bağlantısı (URL)</label>
+            <input type="url" id="new-post-url" class="form-control" placeholder="https://www.trthaber.com/...">
+          </div>
+
+          <div class="form-group">
+            <label>Bilgisayarımdan Görsel Yükle</label>
+            <input type="file" accept="image/*" class="form-control" onchange="handleCustomPostFileSelect(event)">
+          </div>
+
+          <div class="form-group">
+            <label>Veya Harici Görsel URL</label>
+            <input type="url" id="new-post-image" class="form-control" placeholder="https://images.unsplash.com/...">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" onclick="closeAddPostModal()">İptal</button>
+          <button type="submit" class="btn-primary">Gönderiyi Yayınla</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL 4: ADD JOB LISTING MODAL -->
+  <div id="add-job-modal" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>💼 Yeni İş İlanı Yayınla</h3>
+        <button class="close-btn" onclick="closeAddJobModal()">✕</button>
+      </div>
+      <form onsubmit="handleAddJobSubmit(event)">
+        <div class="modal-body">
+          <div class="form-group">
+            <label>Pozisyon Başlığı</label>
+            <input type="text" id="new-job-title" class="form-control" placeholder="Örn: Senior Yapay Zekâ & NLP Mühendisi" required>
+          </div>
+
+          <div class="form-group">
+            <label>Şirket / Kurum Adı</label>
+            <input type="text" id="new-job-company" class="form-control" placeholder="Örn: Aselsan A.Ş." required>
+          </div>
+
+          <div class="form-group">
+            <label>Uzmanlık Alanı</label>
+            <select id="new-job-category" class="form-control">
+              <option value="yapay-zeka">Yapay Zekâ & NLP</option>
+              <option value="yazılım">Yazılım & Web</option>
+              <option value="siber-guvenlik">Siber Güvenlik</option>
+              <option value="tasarim">UI/UX Tasarım</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Lokasyon & Çalışma Tipi</label>
+            <input type="text" id="new-job-location" class="form-control" placeholder="Örn: Ankara (Ofis) veya İstanbul (Uzaktan)">
+          </div>
+
+          <div class="form-group">
+            <label>Maaş Skalası</label>
+            <input type="text" id="new-job-salary" class="form-control" placeholder="Örn: 90.000 - 130.000 ₺">
+          </div>
+
+          <div class="form-group">
+            <label>Aranan Beceriler (Virgülle ayırın)</label>
+            <input type="text" id="new-job-skills" class="form-control" placeholder="Örn: Python, PyTorch, LLM, Docker">
+          </div>
+
+          <div class="form-group checkbox-group">
+            <label>
+              <input type="checkbox" id="new-job-urgent"> 🔴 Acil İlan Olarak İşaretle
+            </label>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" onclick="closeAddJobModal()">İptal</button>
+          <button type="submit" class="btn-primary">İlanı Yayınla</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL 5: JOB ALERT MODAL -->
+  <div id="job-alert-modal" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>🔔 Akıllı İş Alarmı Kur</h3>
+        <button class="close-btn" onclick="closeJobAlertModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <p>Takip etmek istediğiniz pozisyon veya uzmanlık alanını girin. Bu kriterde yeni bir ilan açıldığında AI Asistanı size anında bildirim verecektir.</p>
+        <div class="form-group" style="margin-top: 12px;">
+          <label>İş Kriteri / Pozisyon Adı</label>
+          <input type="text" id="job-alert-input" class="form-control" placeholder="Örn: Yapay Zekâ, React, Siber Güvenlik...">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" onclick="closeJobAlertModal()">İptal</button>
+        <button class="btn-primary" onclick="submitJobAlert()">Alarmı Etkinleştir</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 6: INTERACTIVE COMMENTS MODAL WITH ARGO MODERATION -->
+  <div id="comments-modal" class="modal-overlay">
+    <div class="modal-card" style="max-width: 600px;">
+      <div class="modal-header">
+        <h3>💬 Gönderi Yorumları & Argo Moderasyonu</h3>
+        <button class="close-btn" onclick="closeCommentsModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div id="modal-target-post-preview" style="background: var(--bg-dark); padding: 12px; border-radius: 8px; border-left: 3px solid var(--accent-blue-light); font-size: 13px; color: var(--text-main); margin-bottom: 16px;">
+          Target post text loading...
+        </div>
+
+        <div style="font-weight: 700; font-size: 14px; margin-bottom: 8px; color: var(--text-main);">
+          Yorumlar Akışı:
+        </div>
+        <div id="comments-list-container" style="max-height: 250px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; padding-right: 4px;">
+          <!-- Comments rendered dynamically -->
+        </div>
+
+        <form onsubmit="handleCommentSubmit(event)">
+          <div class="form-group">
+            <label>Yeni Yorum Ekle (Argo İfadeler Otomatik Sansürlenir)</label>
+            <textarea id="comment-input-text" class="form-control" rows="3" placeholder="Yorumunuzu yazın..." required></textarea>
+          </div>
+          <button type="submit" class="btn-primary" style="width: 100%;">💬 Yorumu Gönder & Moderasyondan Geçir</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST NOTIFICATION CONTAINER -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <!-- SCRIPT INCLUDES -->
+  <script src="/mcp_tools.js"></script>
+  <script src="data.js"></script>
+  <script src="moderation.js"></script>
+  <script src="agent.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

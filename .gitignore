@@ -1,0 +1,21 @@
+# Node Modules
+node_modules/
+
+# Environment Variables (Secrets)
+.env
+.env.local
+*.env
+
+# SQLite Database Runtime
+backend/database.db
+backend/temp_report_*.json
+
+# Logs & Temporary Files
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS Generated Files
+.DS_Store
+Thumbs.db
