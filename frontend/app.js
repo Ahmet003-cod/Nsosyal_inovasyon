@@ -23,6 +23,7 @@ let composerAttachedImage = null;
 let customPostModalImage = null;
 let currentCommentPostId = null;
 let isCommentModeActive = false;
+let savedPostIds = new Set(); // Kaydedilen gönderilerin ID listesi
 
 // ===== INITIALIZATION =====
 function initApp() {
@@ -44,7 +45,9 @@ function renderFeed() {
 
   let posts = [...window.NSosyalData.posts];
 
-  if (currentFeedCategory) {
+  if (currentFeedCategory === '__saved__') {
+    posts = posts.filter(p => savedPostIds.has(p.id));
+  } else if (currentFeedCategory) {
     posts = posts.filter(p => p.category === currentFeedCategory);
   }
 
@@ -936,6 +939,60 @@ function askFactCheckForPost(postText) {
   const input = document.getElementById('ai-user-input');
   input.value = `Bu haberi doğrula: "${postText.substring(0, 100)}"`;
   handleAISendMessage();
+}
+
+// ===== SEKMELERİ DEĞİŞTİRME (Tüm Akış / Görsel Medya) =====
+function switchFeedTab(tabName) {
+  currentFeedTab = tabName;
+
+  document.querySelectorAll('.feed-tab').forEach(t => t.classList.remove('active'));
+  const activeTab = document.getElementById('tab-' + tabName);
+  if (activeTab) activeTab.classList.add('active');
+
+  renderFeed();
+  showToast('info', tabName === 'media' ? '🖼️ Görsel Medya akışı gösteriliyor' : '📰 Tüm akış gösteriliyor');
+}
+
+// ===== KAYDEDİLEN GÖNDERİLERİ FİLTRELE =====
+function filterSavedPosts() {
+  switchView('feed');
+  currentFeedCategory = null;
+
+  const container = document.getElementById('posts-container');
+  if (!container) return;
+
+  const allPosts = window.NSosyalData.posts || [];
+  const saved = allPosts.filter(p => savedPostIds.has(p.id));
+
+  if (saved.length === 0) {
+    container.innerHTML = `
+      <div style="padding: 40px 20px; text-align: center; color: var(--text-muted);">
+        <div style="font-size: 40px; margin-bottom: 12px;">🔖</div>
+        <div style="font-size: 16px; font-weight: 600; color: var(--text-secondary);">Henüz kaydettiğiniz gönderi yok.</div>
+        <p style="font-size: 13px; margin-top: 6px;">Akıştaki gönderilerin "🔖 Kaydet" butonuna tıklayarak buraya ekleyebilirsiniz.</p>
+      </div>`;
+    showToast('info', '🔖 Kaydedilen gönderi bulunamadı');
+    return;
+  }
+
+  showToast('success', `🔖 ${saved.length} kaydedilmiş gönderi gösteriliyor`);
+  // Re-render only saved posts – reuse renderFeed logic
+  currentFeedCategory = '__saved__';
+  renderFeed();
+}
+
+// ===== COMPOSER'DAN AI FACT-CHECK SORGULA =====
+function askFactCheckFromComposer() {
+  const composerText = document.getElementById('composer-text');
+  const text = composerText ? composerText.value.trim() : '';
+
+  if (!text) {
+    showToast('warning', '⚠️ Lütfen önce doğrulatmak istediğiniz haberi veya iddiayı yazın.');
+    return;
+  }
+
+  askFactCheckForPost(text);
+  showToast('info', `🤖 AI Fact-Check Motoru "${text.substring(0, 50)}..." sorguluyor...`);
 }
 
 function openJobAlertModalWithTitle(title) {
