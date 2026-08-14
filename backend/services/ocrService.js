@@ -1,12 +1,55 @@
 // ============================================================
 // BACKEND/SERVICES/OCRSERVICE.JS
-// Multimodal Vision AI & OCR Metin Ayıklama Servisi (Built-in fetch)
+// Hibrit OCR Mimarisi: Birincil OpenAI GPT-4o Vision AI + Yedek Tesseract.js Motoru
 // TEKNOFEST 2026 - NSosyal İnovasyon Projesi
-// KOD AÇIKLAMALARI: Görsellerdeki haber metinlerini ve başlıkları OCR ile okur.
+// KOD AÇIKLAMALARI: Görsellerdeki haber metinlerini ve paragraf içeriklerini okur.
+// OpenAI API limiti dolduğunda sistem engellenmez, otomatik Tesseract.js yerel OCR devreye girer.
 // ============================================================
 
+const Tesseract = require('tesseract.js');
+
 /**
- * extractTextFromImage: Görseldeki (Base64 veya URL) Türkçe haber metinlerini OCR/Vision AI ile okur.
+ * fallbackTesseractOCR: Vision AI limiti dolduğunda veya API hatasında devreye giren yerel Tesseract OCR motoru.
+ */
+async function fallbackTesseractOCR(imageInput) {
+  console.log('🔄 [YEDEK OCR MOTORU DEVREDE]: Vision AI limiti/bağlantısı aşıldı! Tesseract.js yerel OCR motoru çalıştırılıyor...');
+
+  try {
+    let processInput = imageInput;
+    if (imageInput.startsWith('data:image/')) {
+      // Base64 formatını Tesseract'a ver
+      processInput = Buffer.from(imageInput.split(',')[1], 'base64');
+    }
+
+    const result = await Tesseract.recognize(processInput, 'tur+eng', {
+      logger: () => {}
+    });
+
+    const text = (result && result.data && result.data.text) ? result.data.text.trim() : '';
+
+    if (text.length > 5) {
+      console.log(`✅ [YEDEK TESSERACT OCR BAŞARILI]: "${text.substring(0, 80).replace(/\n/g, ' ')}..."`);
+      return {
+        hasText: true,
+        extractedText: text,
+        summary: 'Vision AI limiti dolduğu için yerel Tesseract.js OCR motoru ile paragraflar başarıyla okundu.'
+      };
+    }
+  } catch (err) {
+    console.warn('⚠️ [TESSERACT YEDEK OCR UYARISI]:', err.message);
+  }
+
+  return {
+    hasText: false,
+    extractedText: '',
+    summary: 'Görselde okunabilir metin paragrafı bulunamadı.'
+  };
+}
+
+/**
+ * extractTextFromImage: Görseldeki (Base64 veya URL) haber metinlerini ve paragrafları okur.
+ * Birincil: OpenAI GPT-4o Vision AI
+ * İkincil (Yedek): Tesseract.js (Limit bittiğinde engellenmeyi önler)
  */
 async function extractTextFromImage(imageInput) {
   if (!imageInput || typeof imageInput !== 'string') {
@@ -15,14 +58,11 @@ async function extractTextFromImage(imageInput) {
 
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey || apiKey.includes('your_openai_api_key')) {
-    return {
-      hasText: false,
-      extractedText: '',
-      summary: 'OpenAI API key eksik olduğu için varsayılan metin okuma modunda çalışıldı.'
-    };
+    // API Key yoksa doğrudan yerel Tesseract OCR motoruna geç
+    return await fallbackTesseractOCR(imageInput);
   }
 
-  console.log('📷 [MULTIMODAL OCR VISION AI] Görseldeki metinler taranıyor ve okunuyor...');
+  console.log('📷 [HİBRİT OCR - BİRİNCİL KATMAN] OpenAI GPT-4o Vision AI ile görsel taranıyor...');
 
   try {
     let imageContentObj = null;
@@ -45,7 +85,7 @@ async function extractTextFromImage(imageInput) {
             role: 'system',
             content: `Sen gelişmiş bir OCR ve Multimodal Vision AI uzmanısın.
 Görevlerin:
-1. Görsel üzerindeki tüm Türkçe/İngilizce metinleri, manşetleri, haber başlıklarını ve sayısal verileri eksiksiz oku.
+1. Görsel üzerindeki tüm Türkçe/İngilizce metinleri, manşetleri, paragraf haber yazılarını ve sayısal verileri eksiksiz oku.
 2. Görseldeki metin yoksa veya sadece grafik varsa nesneleri kısaca özetle.
 3. Yanıtı SADECE şu JSON yapısında döndür:
 {
@@ -57,7 +97,7 @@ Görevlerin:
           {
             role: 'user',
             content: [
-              { type: 'text', text: 'Lütfen bu görseldeki tüm yazıları OCR ile harfi harfine okuyup metne dök:' },
+              { type: 'text', text: 'Lütfen bu görseldeki tüm yazıları ve paragrafları OCR ile harfi harfine okuyup metne dök:' },
               imageContentObj
             ]
           }
@@ -67,17 +107,23 @@ Görevlerin:
       })
     });
 
+    if (!response.ok) {
+      console.warn(`⚠️ [VISION AI LİMİT/KOTA UYARISI]: HTTP ${response.status} - Yerel Tesseract OCR yedek motoruna geçiliyor...`);
+      return await fallbackTesseractOCR(imageInput);
+    }
+
     const data = await response.json();
     if (data.choices && data.choices[0]) {
       const result = JSON.parse(data.choices[0].message.content);
-      console.log(`✅ [OCR VISION BAŞARILI]: "${(result.extractedText || '').substring(0, 80)}..."`);
+      console.log(`✅ [VISION AI OCR BAŞARILI]: "${(result.extractedText || '').substring(0, 80).replace(/\n/g, ' ')}..."`);
       return result;
     }
   } catch (err) {
-    console.error('OCR Vision AI hatası:', err.message);
+    console.error('Vision AI hatası:', err.message);
   }
 
-  return { hasText: false, extractedText: '', summary: '' };
+  // Herhangi bir hata durumunda (Kota aşımı, internet kesintisi vb.) engellenmemek için Tesseract yerel OCR'ı çalıştır
+  return await fallbackTesseractOCR(imageInput);
 }
 
 module.exports = { extractTextFromImage };
