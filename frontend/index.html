@@ -177,27 +177,36 @@
       <div id="jobs-view" class="view-panel">
         <div class="jobs-hero">
           <div class="hero-content">
-            <h2>💼 NSosyal Akıllı İş & Kariyer Portalı</h2>
-            <p>TEKNOFEST ve İnovasyon ekosistemindeki en güncel teknoloji, yapay zekâ ve siber güvenlik ilanları.</p>
+            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 6px;">
+              <h2 style="margin: 0;">💻 NSosyal Akıllı Teknoloji & Kariyer Portalı <span id="jobs-count-badge" style="background: rgba(37,99,235,0.2); color: #60A5FA; padding: 2px 10px; border-radius: 20px; font-size: 16px; font-weight: 700;">(62 İlan)</span></h2>
+              <span style="background: rgba(16,185,129,0.15); color: #10B981; border: 1px solid rgba(16,185,129,0.3); padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;">
+                🔄 Günlük Otomatik Tarama: Aktif (24s Döngü)
+              </span>
+            </div>
+            <p>13 Farklı Platformdan (Yenibiriş, Indeed Türkiye, İşin Olsun, LinkedIn TR, İŞKUR, Kariyer.net, Youthall, Secretcv, Softito/BTK, RemoteOK, Glassdoor) her gün otomatik yenilenen canlı teknoloji ilanları ve doğrudan başvuru bağlantıları.</p>
             
             <div class="jobs-search-box">
-              <input type="text" id="jobs-search-input" placeholder="Pozisyon, şirket veya yetenek ara (Örn: Python, React, NLP)..." oninput="handleJobSearch()">
+              <input type="text" id="jobs-search-input" placeholder="Pozisyon, şirket veya Yenibiriş/Indeed/İşin Olsun ara (Örn: TurkNet, Yemeksepeti, Migros, Python)..." oninput="handleJobSearch()">
               <button onclick="handleJobSearch()">İlan Ara</button>
+              <button onclick="searchLiveMCPJobs()" style="background: linear-gradient(135deg, #7C3AED, #2563EB); border: none; font-weight: 700;">🤖 Canlı MCP Taraması</button>
             </div>
 
-            <div class="jobs-hero-actions" style="margin-top: 12px; display: flex; gap: 10px;">
-              <button class="primary-post-btn" onclick="openAddJobModal()">+ Yeni İş İlanı Yayınla</button>
+            <div class="jobs-hero-actions" style="margin-top: 12px; display: flex; gap: 10px; flex-wrap: wrap;">
+              <button class="primary-post-btn" onclick="openAddJobModal()">+ Yeni Teknoloji İlanı Yayınla</button>
               <button class="secondary-post-btn" onclick="openJobAlertModal()">🔔 Bu Pozisyona İş Alarmı Kur</button>
+              <button class="secondary-post-btn" onclick="triggerManualJobRefresh()" style="background: rgba(16,185,129,0.1); border-color: rgba(16,185,129,0.3); color: #10B981;">🔄 Canlı İlanları Şimdi Yenile</button>
             </div>
           </div>
         </div>
 
-        <div class="job-filters-bar">
-          <button class="filter-chip active" onclick="filterJobs('hepsi', this)">Tüm İlanlar</button>
-          <button class="filter-chip" onclick="filterJobs('yapay-zeka', this)">Yapay Zekâ & NLP</button>
-          <button class="filter-chip" onclick="filterJobs('yazılım', this)">Yazılım & Web</button>
-          <button class="filter-chip" onclick="filterJobs('siber-guvenlik', this)">Siber Güvenlik</button>
-          <button class="filter-chip" onclick="filterJobs('tasarim', this)">UI/UX Tasarım</button>
+        <div class="job-filters-bar" style="overflow-x: auto; white-space: nowrap; padding-bottom: 6px;">
+          <button class="filter-chip active" id="chip-hepsi" onclick="filterJobs('hepsi', this)">Tüm Teknoloji İlanları (50)</button>
+          <button class="filter-chip" id="chip-local" onclick="filterJobs('local', this)">🇹🇷 Yerli Kaynaklar (32)</button>
+          <button class="filter-chip" id="chip-international" onclick="filterJobs('international', this)">🌐 Yabancı Kaynaklar (18)</button>
+          <button class="filter-chip" onclick="filterJobs('yapay-zeka', this)">🤖 Yapay Zekâ & ML</button>
+          <button class="filter-chip" onclick="filterJobs('yazilim', this)">💻 Web & Mobil Yazılım</button>
+          <button class="filter-chip" onclick="filterJobs('siber-guvenlik', this)">🛡️ Siber Güvenlik</button>
+          <button class="filter-chip" onclick="filterJobs('cloud', this)">☁️ Cloud & DevOps</button>
         </div>
 
         <div id="jobs-list-container" class="jobs-list-container">

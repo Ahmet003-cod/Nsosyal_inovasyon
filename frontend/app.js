@@ -451,9 +451,30 @@ function renderJobs(filterCategory = 'hepsi', searchQuery = '') {
   const container = document.getElementById('jobs-list-container');
   if (!container) return;
 
-  let jobs = [...window.NSosyalData.jobListings];
+  const allJobsList = window.NSosyalData.jobListings || [];
+  const totalCount = allJobsList.length;
+  const localCount = allJobsList.filter(j => j.sourceType === 'local' || j.flag === '🇹🇷').length;
+  const intlCount = allJobsList.filter(j => j.sourceType === 'international' || j.flag === '🌐').length;
 
-  if (filterCategory !== 'hepsi') {
+  const badgeEl = document.getElementById('jobs-count-badge');
+  if (badgeEl) badgeEl.textContent = `(${totalCount} Aktif İlan)`;
+
+  const chipHepsi = document.getElementById('chip-hepsi');
+  if (chipHepsi) chipHepsi.textContent = `Tüm Teknoloji İlanları (${totalCount})`;
+
+  const chipLocal = document.getElementById('chip-local');
+  if (chipLocal) chipLocal.textContent = `🇹🇷 Yerli Kaynaklar (${localCount})`;
+
+  const chipIntl = document.getElementById('chip-international');
+  if (chipIntl) chipIntl.textContent = `🌐 Yabancı Kaynaklar (${intlCount})`;
+
+  let jobs = [...allJobsList];
+
+  if (filterCategory === 'local') {
+    jobs = jobs.filter(j => j.sourceType === 'local' || j.flag === '🇹🇷');
+  } else if (filterCategory === 'international') {
+    jobs = jobs.filter(j => j.sourceType === 'international' || j.flag === '🌐');
+  } else if (filterCategory !== 'hepsi') {
     jobs = jobs.filter(j => j.category === filterCategory);
   }
 
@@ -462,6 +483,7 @@ function renderJobs(filterCategory = 'hepsi', searchQuery = '') {
     jobs = jobs.filter(j => 
       j.title.toLowerCase().includes(q) ||
       j.company.toLowerCase().includes(q) ||
+      (j.sourceSite || '').toLowerCase().includes(q) ||
       (Array.isArray(j.skills) ? j.skills : (j.skills || '').split(',')).some(s => s.toLowerCase().includes(q))
     );
   }
@@ -471,7 +493,7 @@ function renderJobs(filterCategory = 'hepsi', searchQuery = '') {
       <div style="padding: 40px 20px; text-align: center; color: var(--text-muted);">
         <div style="font-size: 40px; margin-bottom: 12px;">💼</div>
         <div style="font-size: 16px; font-weight: 600; color: var(--text-secondary);">Kriterlere uygun iş ilanı bulunamadı.</div>
-        <p style="font-size: 13px; margin-top: 6px;">"İş İlanı Ekle" butonuna tıklayarak yeni ilan yayınlayabilir veya "İş Alarmı Kur" butonuyla takip edebilirsiniz.</p>
+        <p style="font-size: 13px; margin-top: 6px;">"Canlı MCP Taraması" butonuna tıklayarak İŞKUR veya LinkedIn kaynaklarında arama yapabilirsiniz.</p>
       </div>`;
     return;
   }
@@ -480,39 +502,98 @@ function renderJobs(filterCategory = 'hepsi', searchQuery = '') {
   jobs.forEach(job => {
     const urgentBadge = job.urgent ? `<span class="urgent-badge">🔴 ACİL</span>` : '';
     const newBadge = job.isNew ? `<span class="urgent-badge" style="background: rgba(37,99,235,0.2); color: #60A5FA;">✨ YENİ</span>` : '';
+    const flagIcon = job.flag || (job.sourceType === 'international' ? '🌐' : '🇹🇷');
+    const sourceSite = job.sourceSite || 'LinkedIn Türkiye';
+    const applyUrl = job.applyUrl || 'https://www.linkedin.com/jobs/';
+
     const skillsList = Array.isArray(job.skills) ? job.skills : (job.skills || '').split(',');
     const skillsHTML = skillsList.map(s => `<span class="skill-tag">${s}</span>`).join('');
 
     html += `
-      <div class="job-card" id="job-${job.id}">
-        <div class="job-header">
-          <div class="job-logo" style="background: ${job.color || '#2563EB'}">${job.logo}</div>
+      <div class="job-card" id="job-${job.id}" style="border-left: 4px solid ${job.color || '#2563EB'}; position: relative; overflow: hidden;">
+        <div style="position: absolute; top: 12px; right: 12px; display: flex; gap: 6px; align-items: center;">
+          <span style="background: var(--bg-hover); padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; color: var(--text-secondary); border: 1px solid var(--border);">
+            ${flagIcon} ${sourceSite}
+          </span>
+          ${urgentBadge}
+          ${newBadge}
+        </div>
+
+        <div class="job-header" style="margin-top: 8px;">
+          <div class="job-logo" style="background: ${job.color || '#2563EB'}; width: 52px; height: 52px; border-radius: 12px; font-size: 20px; font-weight: 800;">${job.logo || 'JOB'}</div>
           <div class="job-meta">
-            <div class="job-title">
-              <span>${job.title}</span>
-              ${urgentBadge}
-              ${newBadge}
+            <div class="job-title" style="margin-right: 120px;">
+              <span style="font-size: 17px; font-weight: 700;">${job.title}</span>
             </div>
-            <div class="job-company">${job.company} • ${job.postedAt}</div>
+            <div class="job-company" style="font-size: 13px; font-weight: 600; color: var(--accent); margin-top: 2px;">
+              🏢 ${job.company} • <span style="color: var(--text-muted); font-weight: 400;">${job.postedAt}</span>
+            </div>
             
-            <div class="job-details">
+            <div class="job-details" style="margin-top: 8px;">
               <span class="job-detail-tag">📍 ${job.location}</span>
               <span class="job-detail-tag">💰 ${job.salary}</span>
               <span class="job-detail-tag">👥 ${job.applicants} başvuru</span>
+              <span class="job-detail-tag">💼 ${job.type}</span>
             </div>
 
-            <div class="job-skills">${skillsHTML}</div>
+            <div class="job-skills" style="margin-top: 10px;">${skillsHTML}</div>
           </div>
         </div>
 
-        <div class="job-actions">
-          <button class="job-apply-btn" onclick="showToast('success', '🚀 Başvurunuz ${job.company} firmasına iletildi!')">Hemen Başvur</button>
-          <button class="job-alert-btn" onclick="openJobAlertModalWithTitle('${job.title}')">🔔 Bu Pozisyona Alarm Kur</button>
+        <div class="job-actions" style="margin-top: 16px; border-top: 1px solid var(--border); padding-top: 12px; display: flex; justify-content: space-between; gap: 10px;">
+          <a href="${applyUrl}" target="_blank" rel="noopener noreferrer" class="job-apply-btn" style="display: inline-flex; align-items: center; justify-content: center; gap: 6px; text-decoration: none; padding: 10px 20px; border-radius: 10px; font-weight: 700; background: linear-gradient(135deg, ${job.color || '#2563EB'}, #1E40AF); color: white;">
+            🚀 İlana Başvur / Kaynağa Git (${sourceSite}) ↗
+          </a>
+          <button class="job-alert-btn" onclick="openJobAlertModalWithTitle('${job.title}')" style="padding: 10px 16px; border-radius: 10px;">🔔 İş Alarmı Kur</button>
         </div>
       </div>`;
   });
 
   container.innerHTML = html;
+}
+
+// ===== 🤖 CANLI MCP İŞ TARAMA FONKSİYONU =====
+async function searchLiveMCPJobs() {
+  const query = document.getElementById('jobs-search-input').value.trim() || 'yazılım';
+  showToast('info', `💼 MCP İş Tarayıcısı "${query}" için canlı iş ilanlarını süzüyor...`);
+
+  try {
+    const res = await fetch('/api/jobs/search-live', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query, sourceType: currentJobFilter })
+    });
+    const data = await res.json();
+    if (data.success && data.jobs) {
+      window.NSosyalData.jobListings = data.jobs;
+      renderJobs(currentJobFilter, query);
+      showToast('success', `✨ MCP Canlı Tarama Tamamlandı! ${data.jobs.length} iş fırsatı bulundu.`);
+    }
+  } catch (err) {
+    showToast('error', 'İş tarama hatası: ' + err.message);
+  }
+}
+
+// ===== 🔄 MANÜEL / GÜNLÜK OTOMATİK İLAN YENİLEME =====
+async function triggerManualJobRefresh() {
+  showToast('info', '🔄 Yenibiriş, Indeed TR, İşin Olsun ve 13 kaynaktan güncel canlı ilanlar çekiliyor...');
+
+  try {
+    const res = await fetch('/api/jobs/refresh-daily', { method: 'POST' });
+    const data = await res.json();
+    if (data.success) {
+      // Yenilenen verileri getir
+      const fetchRes = await fetch('/api/jobs');
+      const fetchData = await fetchRes.json();
+      if (fetchData.success) {
+        window.NSosyalData.jobListings = fetchData.jobs;
+        renderJobs(currentJobFilter, '');
+        showToast('success', `✅ 13 Platform Güncellendi! ${fetchData.jobs.length} canlı ilan aktif.`);
+      }
+    }
+  } catch (err) {
+    showToast('error', 'Güncelleme hatası: ' + err.message);
+  }
 }
 
 // ===== BİLGİSAYARDAN YEREL DOSYA SEÇME =====
@@ -959,16 +1040,19 @@ function toggleSavePost(id) {
   }
 }
 
+let currentJobFilter = 'hepsi';
+
 function filterJobs(cat, btn) {
+  currentJobFilter = cat;
   document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
-  btn.classList.add('active');
-  const searchVal = document.getElementById('jobs-search-input').value;
+  if (btn) btn.classList.add('active');
+  const searchVal = document.getElementById('jobs-search-input') ? document.getElementById('jobs-search-input').value : '';
   renderJobs(cat, searchVal);
 }
 
 function handleJobSearch() {
-  const val = document.getElementById('jobs-search-input').value;
-  renderJobs('hepsi', val);
+  const val = document.getElementById('jobs-search-input') ? document.getElementById('jobs-search-input').value : '';
+  renderJobs(currentJobFilter, val);
 }
 
 function handleGlobalSearch(e) {

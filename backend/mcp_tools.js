@@ -57,6 +57,18 @@ const MCP_TOOL_REGISTRY = [
       },
       required: ['claim', 'score', 'verdict', 'sources']
     }
+  },
+  {
+    name: 'mcp_fetch_live_job_opportunities',
+    description: 'Yenibiriş, Indeed Türkiye, İşin Olsun, LinkedIn TR, İŞKUR, Kariyer.net, Youthall, Secretcv, Softito/BTK, RemoteOK, Glassdoor dahil 13 kariyer kaynağından günlük otomatik yenilenen canlı iş ilanlarını tarar ve doğrudan başvuru linkleri sunar.',
+    parameters: {
+      type: 'object',
+      properties: {
+        query: { type: 'string', description: 'Aranacak pozisyon, şirket veya yetenek (Örn: React, AI, Python, TurkNet, Yemeksepeti, Migros)' },
+        sourceType: { type: 'string', enum: ['all', 'local', 'international'], description: 'Yerli mi yabancı kaynaklar mı süzülsün?' }
+      },
+      required: ['query']
+    }
   }
 ];
 

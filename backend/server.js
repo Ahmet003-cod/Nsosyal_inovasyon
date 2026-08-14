@@ -16,6 +16,7 @@ const { runLangChainVerificationPipeline } = require('./tools/langchainTools.js'
 const { MCP_TOOL_REGISTRY } = require('./mcp_tools.js');
 const { sendReportEmail } = require('./services/mailer.js');
 const { extractTextFromImage } = require('./services/ocrService.js');
+const JobCrawlerService = require('./services/jobCrawlerService.js');
 
 const app = express();
 const PORT = process.env.PORT || 3005;
@@ -171,6 +172,75 @@ app.post('/api/jobs', async (req, res) => {
     };
     const newJob = await DBService.addJob(sanitizedJob);
     res.json({ success: true, job: newJob });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// ===== 🤖 MCP & CANLI KARIYER İŞ İLANI TARAMA ENDPOINT'I =====
+app.post('/api/jobs/search-live', async (req, res) => {
+  try {
+    const query = sanitizeInput(req.body.query || 'yazılım');
+    const sourceType = req.body.sourceType || 'all'; // all | local | international
+    const serperApiKey = process.env.SERPER_API_KEY;
+
+    console.log(`💼 [MCP CANLI KARIYER TARAMA]: Sorgu: "${query}" | Kaynak Türü: "${sourceType}"`);
+
+    let liveJobs = [];
+    const allJobs = await DBService.getJobs();
+
+    // 1. Yerel veritabanında filtrele
+    let filtered = allJobs.filter(j => {
+      const matchQuery = (j.title + ' ' + j.company + ' ' + (j.skills ? j.skills.join(' ') : '') + ' ' + (j.sourceSite || '')).toLowerCase().includes(query.toLowerCase());
+      if (sourceType === 'local') return matchQuery && (j.sourceType === 'local' || j.flag === '🇹🇷');
+      if (sourceType === 'international') return matchQuery && (j.sourceType === 'international' || j.flag === '🌐');
+      return matchQuery;
+    });
+
+    // 2. Eğer Serper API key varsa canlı Google Jobs araması yap ve zenginleştir
+    if (serperApiKey && !serperApiKey.includes('your_serper_api_key')) {
+      try {
+        const searchQuery = `${query} iş ilanları site:linkedin.com OR site:iskur.gov.tr OR site:remoteok.com OR site:kariyer.net OR site:youthall.com`;
+        const serperRes = await fetch('https://google.serper.dev/search', {
+          method: 'POST',
+          headers: { 'X-API-KEY': serperApiKey, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ q: searchQuery, gl: 'tr', hl: 'tr', num: 6 })
+        });
+        if (serperRes.ok) {
+          const sData = await serperRes.json();
+          if (sData.organic) {
+            const apiJobs = sData.organic.map((item, idx) => {
+              const isIntl = item.link.includes('remoteok') || item.link.includes('indeed') || item.link.includes('glassdoor');
+              return {
+                id: 1000 + idx,
+                title: item.title.replace(/\|.*/, '').trim(),
+                company: item.snippet ? item.snippet.substring(0, 30) : 'Kariyer Kaynağı',
+                logo: isIntl ? 'GL' : 'TR',
+                color: isIntl ? '#7C3AED' : '#059669',
+                location: isIntl ? 'Remote (Global)' : 'Türkiye (Çeşitli)',
+                type: 'Canlı İlan',
+                salary: 'Sektör Standardı',
+                category: 'teknoloji',
+                skills: ['Canlı Veri', query],
+                applicants: Math.floor(Math.random() * 50) + 5,
+                postedAt: 'Canlı Tarandı',
+                urgent: true,
+                isNew: true,
+                applyUrl: item.link,
+                sourceSite: isIntl ? 'RemoteOK / Global' : 'Canlı Kariyer Kaynağı',
+                sourceType: isIntl ? 'international' : 'local',
+                flag: isIntl ? '🌐' : '🇹🇷'
+              };
+            });
+            filtered = [...apiJobs, ...filtered];
+          }
+        }
+      } catch (err) {
+        console.warn('Serper canlı iş tarama uyarısı:', err.message);
+      }
+    }
+
+    res.json({ success: true, jobs: filtered, count: filtered.length, query });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
@@ -504,6 +574,16 @@ app.post('/api/classify-url', async (req, res) => {
   }
 });
 
+// ===== 🔄 GÜNLÜK İŞ İLANI OTOMATİK GÜNCELLEME ENDPOINTLERİ =====
+app.get('/api/jobs/daily-refresh-status', (req, res) => {
+  res.json({ success: true, ...JobCrawlerService.getLastRefreshStatus() });
+});
+
+app.post('/api/jobs/refresh-daily', async (req, res) => {
+  const result = await JobCrawlerService.refreshJobsDaily();
+  res.json(result);
+});
+
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, '../frontend/index.html'));
 });
@@ -515,4 +595,7 @@ app.listen(PORT, () => {
   console.log(`   Yorumlar & Argo Moderasyon Portalı Aktif`);
   console.log(`   Multimodal Vision AI & OCR Metin Okuma Aktif`);
   console.log(`   SQLite Kalıcı Veritabanı Aktif (backend/database.db)`);
+  console.log(`   🔄 Günlük Otomatik İş İlanı Tarayıcısı Aktif (24 Saatlik Döngü)`);
+  
+  JobCrawlerService.startDailyAutoRefresh();
 });
