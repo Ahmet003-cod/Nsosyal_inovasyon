@@ -87,6 +87,20 @@ app.get('/api/posts', async (req, res) => {
 
 app.post('/api/posts', async (req, res) => {
   try {
+    const rawText = req.body.text || '';
+    const rawUrl = req.body.url || '';
+    const combined = `${rawText} ${rawUrl}`;
+
+    // Siber Güvenlik Zararlı IP / hxxp(s) Koruması (Backend Fail-Safe)
+    const ipPattern = /(?:https?|hxxps?)?:\/\/(?:\d{1,3}\.){3}\d{1,3}|(?:\d{1,3}\.){3}\d{1,3}/i;
+    if (ipPattern.test(combined)) {
+      console.warn(`🚨 [BACKEND SİBER GÜVENLİK ENGELİ]: Gönderi reddedildi (Ham IP / Zararlı Bağlantı): ${combined.substring(0, 80)}`);
+      return res.status(400).json({
+        success: false,
+        error: '🚨 Siber Güvenlik Engeli: Gönderiniz zararlı yazılım / ham IP adresi bağlantısı içerdiği için reddedildi.'
+      });
+    }
+
     const sanitizedBody = {
       ...req.body,
       text: sanitizeInput(req.body.text),
@@ -117,13 +131,22 @@ app.post('/api/posts/:postId/comments', async (req, res) => {
     const postId = parseInt(req.params.postId);
     if (isNaN(postId)) return res.status(400).json({ success: false, error: 'Geçersiz Post ID' });
 
-    const sanitizedComment = {
+    const rawText = req.body.text || '';
+    const ipPattern = /(?:https?|hxxps?)?:\/\/(?:\d{1,3}\.){3}\d{1,3}|(?:\d{1,3}\.){3}\d{1,3}/i;
+    if (ipPattern.test(rawText)) {
+      return res.status(400).json({
+        success: false,
+        error: '🚨 Siber Güvenlik Engeli: Yorumunuz zararlı yazılım / ham IP adresi bağlantısı içerdiği için reddedildi.'
+      });
+    }
+
+    const sanitizedBody = {
       ...req.body,
       text: sanitizeInput(req.body.text),
       userName: sanitizeInput(req.body.userName)
     };
 
-    const newComment = await DBService.addComment(postId, sanitizedComment);
+    const newComment = await DBService.addComment(postId, sanitizedBody);
     res.json({ success: true, comment: newComment });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
@@ -449,6 +472,35 @@ app.post('/api/fact-check', async (req, res) => {
   } catch (err) {
     console.error('LangChain Fact-check pipeline hatası:', err);
     res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// ===== 🤖 URLBERT AI URL SINIFLANDIRICI (Python Flask Mikro Servise Proxy) =====
+// Model: CrabInHoney/urlbert-tiny-v4-malicious-url-classifier | Doğruluk: %99.22
+app.post('/api/classify-url', async (req, res) => {
+  const url = sanitizeInput(req.body.url);
+  if (!url) return res.status(400).json({ safe: true, error: 'URL parametresi gerekli' });
+
+  console.log(`🤖 [URLBERT AI] URL sınıflandırılıyor: "${url.substring(0, 80)}"`);
+
+  try {
+    const response = await fetch('http://localhost:5001/classify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url }),
+      signal: AbortSignal.timeout(5000) // 5 saniye timeout
+    });
+
+    if (!response.ok) throw new Error(`URLBert servisi HTTP ${response.status}`);
+
+    const result = await response.json();
+    console.log(`   ✅ URLBert Kararı: ${result.labelTr} | Risk: %${result.risk} | Güvenli: ${result.safe}`);
+    return res.json(result);
+
+  } catch (err) {
+    // URLBert servisi çalışmıyorsa → güvenli varsay (sistemin çalışmasını engelleme)
+    console.warn(`⚠️ [URLBERT] Servis erişilemez (${err.message}), güvenli kabul edildi.`);
+    return res.json({ safe: true, label: 'benign', labelTr: 'Bilinmiyor (Servis Kapalı)', risk: 0 });
   }
 });
 

@@ -716,13 +716,36 @@ async function handleCustomPostSubmit(e) {
   const category = document.getElementById('new-post-category').value;
   const rawText = document.getElementById('new-post-text').value;
   const imageInput = document.getElementById('new-post-image').value;
-  const url = document.getElementById('new-post-url').value || null;
+  const inputUrl = document.getElementById('new-post-url').value || null;
 
   const finalImage = customPostModalImage || imageInput || null;
 
-  if (!rawText.trim()) return;
+  if (!rawText.trim() && !inputUrl) return;
 
-  const modResult = await window.ModerationEngine.moderate(rawText, true);
+  // Metin + URL birleştirip tek bir güvenlik taramasından geçir
+  const fullTextToScan = `${rawText} ${inputUrl || ''}`.trim();
+  const modResult = await window.ModerationEngine.moderate(fullTextToScan, true);
+
+  // 🚨 SİBER GÜVENLİK VE PHİSHİNG / MALWARE ENGELLEME
+  if (modResult.action === 'SECURITY_BLOCK') {
+    const detailContainer = document.getElementById('security-threat-detail');
+    let detailHTML = '<div style="font-weight: bold; margin-bottom: 6px;">Tespit Edilen Siber Tehditler:</div>';
+
+    modResult.phase2.threats.forEach(t => {
+      detailHTML += `
+        <div class="threat-item">
+          ❌ <strong>${t.domain}</strong><br>
+          ${t.reason}<br>
+          <span style="font-size: 10px; opacity: 0.8;">Ciddiyet Derecesi: ${t.severity}</span>
+        </div>`;
+    });
+
+    detailContainer.innerHTML = detailHTML;
+    closeAddPostModal();
+    document.getElementById('security-modal').classList.add('visible');
+    return;
+  }
+
   let textToPublish = rawText;
   if (modResult.phase1 && modResult.phase1.foundWords.length > 0) {
     textToPublish = window.ModerationEngine.maskProfanityText(rawText);
@@ -732,7 +755,7 @@ async function handleCustomPostSubmit(e) {
     text: textToPublish,
     category: category,
     image: finalImage,
-    url: url,
+    url: inputUrl,
     userId: 'nhaber_19'
   });
 
