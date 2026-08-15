@@ -73,7 +73,6 @@ const NSosyalData = {
     }
   },
 
-  // ADD NEW POST
   async addPost(postData) {
     try {
       const res = await fetch('/api/posts', {
@@ -85,6 +84,9 @@ const NSosyalData = {
       if (data.success && data.post) {
         this.posts.unshift(data.post);
         return data.post;
+      }
+      if (data && data.error) {
+        return { error: data.error };
       }
     } catch (e) {
       console.error('Error adding post to SQLite:', e);

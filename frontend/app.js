@@ -766,6 +766,11 @@ async function publishPost(rawText) {
     image: finalImage
   });
 
+  if (newPost && newPost.error) {
+    showToast('error', newPost.error);
+    return;
+  }
+
   document.getElementById('composer-text').value = '';
   document.getElementById('composer-link-preview').classList.add('hidden');
   removeComposerImage();

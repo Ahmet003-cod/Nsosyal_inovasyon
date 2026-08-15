@@ -18,6 +18,7 @@ const { sendReportEmail } = require('./services/mailer.js');
 const { extractTextFromImage } = require('./services/ocrService.js');
 const JobCrawlerService = require('./services/jobCrawlerService.js');
 const badWords = require('./badwords.js');
+const { checkHarmfulContentWithAI } = require('./services/aiModerationService.js');
 
 // ===== 🛡️ SİBER GÜVENLİK ARGO & KÜFÜR FİLTRESİ (REGULAR EXPRESSION & UNICODE) =====
 function filterBadWords(text) {
@@ -115,13 +116,24 @@ app.post('/api/posts', async (req, res) => {
     const rawUrl = req.body.url || '';
     const combined = `${rawText} ${rawUrl}`;
 
-    // Siber Güvenlik Zararlı IP / hxxp(s) Koruması (Backend Fail-Safe)
+    // 1. Siber Güvenlik Zararlı IP / hxxp(s) Koruması (Backend Fail-Safe)
     const ipPattern = /(?:https?|hxxps?)?:\/\/(?:\d{1,3}\.){3}\d{1,3}|(?:\d{1,3}\.){3}\d{1,3}/i;
     if (ipPattern.test(combined)) {
       console.warn(`🚨 [BACKEND SİBER GÜVENLİK ENGELİ]: Gönderi reddedildi (Ham IP / Zararlı Bağlantı): ${combined.substring(0, 80)}`);
       return res.status(400).json({
         success: false,
         error: '🚨 Siber Güvenlik Engeli: Gönderiniz zararlı yazılım / ham IP adresi bağlantısı içerdiği için reddedildi.'
+      });
+    }
+
+    // 2. Yapay Zekâ Bağlamsal Tehlike Moderasyon Katmanı (Bomba, Uyuşturucu Teşvik/Satış, İntihar, Ağır Suç)
+    // Not: Sağlık Bakanlığı, Emniyet bültenleri ve haber içeriklerine bağlamsal olarak izin verir!
+    const aiModeration = await checkHarmfulContentWithAI(rawText);
+    if (aiModeration && aiModeration.action === 'BLOCK') {
+      console.warn(`🛑 [AI BAĞLAM MODERASYON ENGELİ]: Gönderi engellendi! Kategori: ${aiModeration.category}`);
+      return res.status(400).json({
+        success: false,
+        error: `🛑 Topluluk Standartları & Güvenlik Uyarısı: ${aiModeration.reason || 'Gönderiniz tehlikeli / yasadışı içerik barındırdığı için yayınlanamaz.'}`
       });
     }
 
