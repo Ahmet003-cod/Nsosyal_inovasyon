@@ -493,24 +493,51 @@ Görevlerin: Multimodal Vision OCR, LangChain & MCP çoklu araç mimarisi ile ha
 app.post('/api/fact-check', async (req, res) => {
   const query = sanitizeInput(req.body.query);
   const image = req.body.image;
+  const verifyMode = req.body.verifyMode || 'both'; // 'text_only' | 'image_only' | 'both'
 
-  console.log(`🔍 [LANGCHAIN & MCP FACT-CHECK] Metin: "${query || ''}" | Görsel Mevcut Mu: ${Boolean(image)}`);
+  console.log(`🔍 [LANGCHAIN & MCP FACT-CHECK] Metin: "${query || ''}" | Mod: ${verifyMode} | Görsel Var Mı: ${Boolean(image)}`);
 
   let ocrExtractedText = '';
-  let combinedQuery = query || '';
+  let mainUserQuery = (query || '').trim();
+  let searchTargetQuery = '';
 
-  if (image) {
-    console.log('📷 Görsel algılandı! Multimodal Vision OCR çalıştırılıyor...');
-    const ocrResult = await extractTextFromImage(image);
-    if (ocrResult && ocrResult.extractedText) {
-      ocrExtractedText = sanitizeInput(ocrResult.extractedText);
-      combinedQuery = `${query ? query + ' ' : ''}${ocrExtractedText}`.trim();
-      console.log(`🔍 [OCR TARAMA SONUCU]: "${ocrExtractedText.substring(0, 100)}..."`);
+  if (verifyMode === 'text_only') {
+    searchTargetQuery = mainUserQuery;
+    console.log(`📝 [MOD: SADECE METİN TEYİDİ] Arama Odağı: "${searchTargetQuery}"`);
+  } else if (verifyMode === 'image_only') {
+    if (image) {
+      console.log('📷 [MOD: SADECE GÖRSEL TEYİDİ] Multimodal Vision OCR çalıştırılıyor...');
+      const ocrResult = await extractTextFromImage(image);
+      if (ocrResult && ocrResult.extractedText && ocrResult.extractedText.trim().length > 5) {
+        ocrExtractedText = sanitizeInput(ocrResult.extractedText.trim());
+        searchTargetQuery = ocrExtractedText;
+        console.log(`🔍 [GÖRSEL MANŞET ARAMA ODAĞI]: "${searchTargetQuery}"`);
+      }
+    }
+    if (!searchTargetQuery) {
+      searchTargetQuery = mainUserQuery || 'Görsel haber doğrulaması';
+    }
+  } else {
+    // Mod: 'both' (Çok Modlu Harmanlanmış Teyit)
+    searchTargetQuery = mainUserQuery;
+    if (image) {
+      console.log('✨ [MOD: ÇOK MODLU BİRLEŞİK TEYİT] Multimodal Vision OCR çalıştırılıyor...');
+      const ocrResult = await extractTextFromImage(image);
+      if (ocrResult && ocrResult.hasText && ocrResult.extractedText && ocrResult.extractedText.trim().length > 5) {
+        ocrExtractedText = sanitizeInput(ocrResult.extractedText.trim());
+        if (!searchTargetQuery) {
+          searchTargetQuery = ocrExtractedText;
+        } else {
+          if (!searchTargetQuery.toLowerCase().includes(ocrExtractedText.toLowerCase().substring(0, 25))) {
+            searchTargetQuery = `${mainUserQuery} ${ocrExtractedText}`;
+          }
+        }
+      }
     }
   }
 
   try {
-    const verification = await runLangChainVerificationPipeline(combinedQuery || 'Görsel içerik doğrulaması');
+    const verification = await runLangChainVerificationPipeline(searchTargetQuery || 'Görsel içerik doğrulaması');
 
     const score = verification.score !== undefined ? verification.score : 0;
     const isFalse = score < 30 || verification.verdict === 'YANLIŞ';

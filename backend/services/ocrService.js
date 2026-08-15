@@ -85,13 +85,14 @@ async function extractTextFromImage(imageInput) {
             role: 'system',
             content: `Sen gelişmiş bir OCR ve Multimodal Vision AI uzmanısın.
 Görevlerin:
-1. Görsel üzerindeki tüm Türkçe/İngilizce metinleri, manşetleri, paragraf haber yazılarını ve sayısal verileri eksiksiz oku.
-2. Görseldeki metin yoksa veya sadece grafik varsa nesneleri kısaca özetle.
-3. Yanıtı SADECE şu JSON yapısında döndür:
+1. Görsel üzerindeki SADECE tipografik olarak yazılmış Türkçe/İngilizce metinleri, manşetleri, haber başlıklarını ve sayısal verileri harfi harfine "extractedText" alanına aktar.
+2. Görseldeki arka plan nesnelerini (örneğin "basın toplantısı", "mikrofonlar", "konuşan kişi") sakın "extractedText" alanına ekleme! Sadece tipografik haber yazılarını oku.
+3. Görselde herhangi bir haber yazısı/metni yazmıyorsa "hasText": false ve "extractedText": "" döndür.
+4. Yanıtı SADECE şu JSON yapısında döndür:
 {
   "hasText": true|false,
-  "extractedText": "Görselden okunan tam metin",
-  "summary": "Görsel içeriğinin kısa özeti"
+  "extractedText": "Görsel üzerindeki gerçek haber metni / manşet (yazı yoksa boş bırak)",
+  "summary": "Görselin kısa görsel özeti (ör: Basın toplantısı fotoğrafı)"
 }`
           },
           {

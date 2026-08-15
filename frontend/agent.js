@@ -85,7 +85,13 @@ const OmniAgent = {
       const res = await fetch('/api/fact-check', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: post.text, image: post.image, url: post.url, category: post.category })
+        body: JSON.stringify({
+          query: post.text,
+          image: post.image,
+          url: post.url,
+          category: post.category,
+          verifyMode: post.verifyMode || 'both'
+        })
       });
       const data = await res.json();
       if (data.success && data.reportText) {

@@ -121,10 +121,18 @@ function createPostCardHTML(post) {
           <div class="post-user-handle">${user.handle} • ${post.time}</div>
         </div>
 
-        <button class="post-verify-bot-btn" onclick="event.stopPropagation(); verifyPostDirectly(${post.id})" title="Tam Hedef Makale URL Linkleriyle Teyit Et">
-          <span>🤖</span>
-          <span>Doğrula</span>
-        </button>
+        <div style="display: flex; gap: 4px;">
+          <button class="post-verify-bot-btn" onclick="event.stopPropagation(); verifyPostDirectly(${post.id}, 'text_only')" title="Sadece Yazılı İddia Metnini Doğrula">
+            <span>📝</span>
+            <span>Metni Doğrula</span>
+          </button>
+          ${post.image ? `
+            <button class="post-verify-bot-btn" onclick="event.stopPropagation(); verifyPostDirectly(${post.id}, 'image_only')" style="background: rgba(139, 92, 246, 0.15); border-color: rgba(139, 92, 246, 0.3);" title="Sadece Görsel Üzerindeki Manşet Yazısını Doğrula">
+              <span>🖼️</span>
+              <span>Görseli Doğrula</span>
+            </button>
+          ` : ''}
+        </div>
 
         <button class="post-menu" title="Diğer Seçenekler">•••</button>
       </div>
@@ -288,10 +296,19 @@ async function publishComment(postId, rawText) {
   }
 }
 
-// ===== HER GÖNDERİ ÜZERİNDEN DOĞRUDAN FACT-CHECK TETİKLEME =====
-async function verifyPostDirectly(postId) {
+// ===== HER GÖNDERİ ÜZERİNDEN DOĞRUDAN FACT-CHECK TETİKLEME (Metin / Görsel Bağımsız Teyit) =====
+async function verifyPostDirectly(postId, mode = 'both') {
   const post = window.NSosyalData.posts.find(p => p.id === postId);
   if (!post) return;
+
+  if (mode === 'text_only' && (!post.text || !post.text.trim())) {
+    showToast('warning', '⚠️ Bu gönderide doğrulanacak yazılı bir metin bulunamadı.');
+    return;
+  }
+  if (mode === 'image_only' && !post.image) {
+    showToast('warning', '⚠️ Bu gönderide doğrulanacak bir görsel bulunamadı.');
+    return;
+  }
 
   const card = document.getElementById(`post-${postId}`);
   if (card) {
@@ -299,17 +316,20 @@ async function verifyPostDirectly(postId) {
     setTimeout(() => { if (card) card.style.borderLeft = ''; }, 4000);
   }
 
-  showToast('info', '🤖 Tam hedef MCP haber makale linkleri sorgulanıyor...');
+  const modeLabel = mode === 'text_only' ? '📝 Metni Doğrula' : mode === 'image_only' ? '🖼️ Görseli Doğrula' : '✨ Çok Modlu Doğrula';
+  showToast('info', `🤖 ${modeLabel} modunda çalıştırılıyor...`);
   
   const panel = document.getElementById('ai-panel');
   if (panel && !panel.classList.contains('open')) {
     toggleAIPanel();
   }
 
-  appendUserMessage(`🤖 "${post.text.substring(0, 70)}..." haberini doğrudan makale linkleriyle doğrula`);
+  const targetPost = { ...post, verifyMode: mode };
+  const querySummary = mode === 'image_only' ? 'Görsel üzerindeki haber manşetini doğrula' : `"${(post.text || '').substring(0, 70)}..." haberini doğrula`;
+  appendUserMessage(`🤖 [${modeLabel}]: ${querySummary}`);
   showThinkingIndicator();
 
-  const report = await window.OmniAgent.deepFactCheckPost(post);
+  const report = await window.OmniAgent.deepFactCheckPost(targetPost);
   removeThinkingIndicator();
   appendAgentMessage(report);
 }
@@ -981,18 +1001,29 @@ function filterSavedPosts() {
   renderFeed();
 }
 
-// ===== COMPOSER'DAN AI FACT-CHECK SORGULA =====
-function askFactCheckFromComposer() {
+// ===== COMPOSER'DAN AI FACT-CHECK SORGULA (Metin / Görsel Bağımsız Teyit) =====
+function askFactCheckFromComposer(mode = 'text_only') {
   const composerText = document.getElementById('composer-text');
   const text = composerText ? composerText.value.trim() : '';
 
-  if (!text) {
-    showToast('warning', '⚠️ Lütfen önce doğrulatmak istediğiniz haberi veya iddiayı yazın.');
+  if (mode === 'text_only' && !text) {
+    showToast('warning', '⚠️ Yazılı metin bulunamadı! Lütfen önce doğrulatmak istediğiniz iddia metnini yazın.');
+    return;
+  }
+  if (mode === 'image_only' && !composerAttachedImage) {
+    showToast('warning', '⚠️ Görsel bulunamadı! Lütfen önce doğrulatmak istediğiniz görseli seçin veya yükleyin.');
     return;
   }
 
-  askFactCheckForPost(text);
-  showToast('info', `🤖 AI Fact-Check Motoru "${text.substring(0, 50)}..." sorguluyor...`);
+  const modeLabel = mode === 'text_only' ? '📝 Metni Doğrula' : '🖼️ Görseli Doğrula';
+  showToast('info', `🤖 AI Fact-Check Motoru (${modeLabel}) çalıştırılıyor...`);
+
+  toggleAIPanel();
+  const input = document.getElementById('ai-user-input');
+  if (input) {
+    input.value = mode === 'image_only' ? 'Görsel üzerindeki haber manşetini doğrula' : `Bu haberi doğrula: "${text.substring(0, 100)}"`;
+  }
+  handleAISendMessage();
 }
 
 function openJobAlertModalWithTitle(title) {
