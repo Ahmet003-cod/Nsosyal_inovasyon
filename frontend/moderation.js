@@ -6,13 +6,8 @@
 // ============================================================
 
 const ModerationEngine = {
-  // Türkçe Argo, Küfür ve Hakaret Sözlüğü
-  profanityList: [
-    'salak', 'aptal', 'gerzek', 'gerizekalı', 'sahtekar', 'dolandırıcı', 'hırsız', 'şerefsiz',
-    'yavşak', 'ibne', 'kahpe', 'göt', 'piç', 'hıyar', 'amk', 'amq', 'amsk', 'yarak', 'yarrak',
-    'daşşak', 'taşak', 'yarram', 'götüm', 'götveren', 'puşt', 'gavat', 'pislik', 'dangalak',
-    'yosma', 'kaltak', 'sürtük', 'kancık', 'zibidi', 'pezevenk', 'çulsuz', 'mala bak', 'hıyar'
-  ],
+  // Argo ve Küfür Denetimi Tek Merkezli backend/badwords.js Üzerinden Yapılmaktadır.
+  // Ön Yüzde Sabit Küfür Dizisi Saklanmaz.
 
   extractURLs(text) {
     // 1. hxxp:// ve hxxps:// (gizlenmiş/defanged linkler) için normalizasyon
@@ -30,20 +25,21 @@ const ModerationEngine = {
     });
   },
 
-  maskProfanityText(text) {
-    let masked = text;
-    this.profanityList.forEach(word => {
-      const regex = new RegExp(`\\b${this.escapeRegExp(word)}\\b|${this.escapeRegExp(word)}`, 'gi');
-      masked = masked.replace(regex, (match) => {
-        if (match.length <= 2) return match[0] + '*';
-        return match[0] + '*'.repeat(match.length - 2) + match[match.length - 1];
+  async maskProfanityText(text) {
+    try {
+      const response = await fetch('/api/filter-badwords', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text })
       });
-    });
-    return masked;
-  },
-
-  escapeRegExp(string) {
-    return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      if (response.ok) {
+        const data = await response.json();
+        return data.filteredText || text;
+      }
+    } catch (err) {
+      console.warn('[Moderation] Badwords API yanıt vermedi.');
+    }
+    return text;
   },
 
   /**
@@ -69,18 +65,28 @@ const ModerationEngine = {
   },
 
   /**
-   * moderate: Argo/Küfür tespiti + URLBert AI ile URL güvenlik taraması.
+   * moderate: Argo/Küfür tespiti (Backend Badwords API) + URLBert AI ile URL güvenlik taraması.
    */
   async moderate(text, bypassProfanity = false) {
-    const foundProfanity = [];
+    let foundProfanity = [];
 
-    // PHASE 1: PROFANITY & SLANG CHECK
-    const lowerText = text.toLowerCase();
-    this.profanityList.forEach(w => {
-      if (lowerText.includes(w.toLowerCase())) {
-        if (!foundProfanity.includes(w)) foundProfanity.push(w);
+    // PHASE 1: PROFANITY & SLANG CHECK (500+ Kelimelik Backend Badwords Entegrasyonu)
+    try {
+      const bwRes = await fetch('/api/filter-badwords', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text }),
+        signal: AbortSignal.timeout(3000)
+      });
+      if (bwRes.ok) {
+        const bwData = await bwRes.json();
+        if (bwData.containsBadWord) {
+          foundProfanity.push('Topluluk Kurallarına Aykırı İfade / Argo');
+        }
       }
-    });
+    } catch (err) {
+      console.warn('[Moderation] Badwords API erişilemedi.');
+    }
 
     if (foundProfanity.length > 0 && !bypassProfanity) {
       return {

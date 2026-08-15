@@ -45,7 +45,7 @@ async function sendReportEmail(targetEmail, reportTitle, frequency, summaryText,
       </div>
 
       <div style="text-align: center; margin-top: 24px; padding-top: 16px; border-top: 1px solid #334155;">
-        <a href="http://localhost:3005${wordDownloadUrl || '/reports'}" style="background: linear-gradient(135deg, #059669, #10B981); color: #FFFFFF; text-decoration: none; padding: 12px 24px; border-radius: 8px; font-weight: bold; display: inline-block; font-size: 14px;">
+        <a href="http://localhost:${process.env.PORT || 3006}${wordDownloadUrl || '/reports'}" style="background: linear-gradient(135deg, #059669, #10B981); color: #FFFFFF; text-decoration: none; padding: 12px 24px; border-radius: 8px; font-weight: bold; display: inline-block; font-size: 14px;">
           📥 Bu Raporu Word Dökümanı (.docx) Olarak İndir
         </a>
       </div>

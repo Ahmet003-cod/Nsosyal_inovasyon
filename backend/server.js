@@ -17,9 +17,32 @@ const { MCP_TOOL_REGISTRY } = require('./mcp_tools.js');
 const { sendReportEmail } = require('./services/mailer.js');
 const { extractTextFromImage } = require('./services/ocrService.js');
 const JobCrawlerService = require('./services/jobCrawlerService.js');
+const badWords = require('./badwords.js');
+
+// ===== 🛡️ SİBER GÜVENLİK ARGO & KÜFÜR FİLTRESİ (REGULAR EXPRESSION & UNICODE) =====
+function filterBadWords(text) {
+  if (typeof text !== 'string') return text;
+  let filteredText = text;
+  const unicodeBoundaryStart = '(?<=^|[^a-zA-Z0-9çğıüşöİĞÜŞÖÇ])';
+  const unicodeBoundaryEnd = '(?=$|[^a-zA-Z0-9çğıüşöİĞÜŞÖÇ])';
+
+  for (const word of badWords) {
+    const escapedWord = word.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+    let pattern;
+    if (word.includes('.') || word.includes('-') || /\d/.test(word)) {
+      pattern = new RegExp(escapedWord, 'gi');
+    } else {
+      const letters = escapedWord.split('');
+      const regexStr = unicodeBoundaryStart + letters.join('[\\W_]*') + unicodeBoundaryEnd;
+      pattern = new RegExp(regexStr, 'gi');
+    }
+    filteredText = filteredText.replace(pattern, '***');
+  }
+  return filteredText;
+}
 
 const app = express();
-const PORT = process.env.PORT || 3005;
+const PORT = process.env.PORT || 3006;
 
 // ===== 🛡️ SİBER GÜVENLİK GÜVENLİK BAŞLIKLARI (SECURITY HEADERS) =====
 app.use((req, res, next) => {
@@ -104,7 +127,7 @@ app.post('/api/posts', async (req, res) => {
 
     const sanitizedBody = {
       ...req.body,
-      text: sanitizeInput(req.body.text),
+      text: filterBadWords(sanitizeInput(req.body.text)),
       category: sanitizeInput(req.body.category)
     };
     const newPost = await DBService.addPost(sanitizedBody);
@@ -112,6 +135,14 @@ app.post('/api/posts', async (req, res) => {
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
+});
+
+// ===== 🔞 ARGO & KÜFÜR FİLTRELEME ENDPOINT'I =====
+app.post('/api/filter-badwords', (req, res) => {
+  const text = req.body.text || '';
+  const filteredText = filterBadWords(text);
+  const containsBadWord = text !== filteredText;
+  res.json({ success: true, filteredText, containsBadWord });
 });
 
 // ===== POST COMMENTS REST ENDPOINTS =====
@@ -143,7 +174,7 @@ app.post('/api/posts/:postId/comments', async (req, res) => {
 
     const sanitizedBody = {
       ...req.body,
-      text: sanitizeInput(req.body.text),
+      text: filterBadWords(sanitizeInput(req.body.text)),
       userName: sanitizeInput(req.body.userName)
     };
 
