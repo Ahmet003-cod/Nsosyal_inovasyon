@@ -121,7 +121,7 @@ function createPostCardHTML(post) {
           <div class="post-user-handle">${user.handle} • ${post.time}</div>
         </div>
 
-        <div style="display: flex; gap: 4px;">
+        <div style="display: flex; gap: 4px; flex-wrap: wrap;">
           <button class="post-verify-bot-btn" onclick="event.stopPropagation(); verifyPostDirectly(${post.id}, 'text_only')" title="Sadece Yazılı İddia Metnini Doğrula">
             <span>📝</span>
             <span>Metni Doğrula</span>
@@ -130,6 +130,10 @@ function createPostCardHTML(post) {
             <button class="post-verify-bot-btn" onclick="event.stopPropagation(); verifyPostDirectly(${post.id}, 'image_only')" style="background: rgba(139, 92, 246, 0.15); border-color: rgba(139, 92, 246, 0.3);" title="Sadece Görsel Üzerindeki Manşet Yazısını Doğrula">
               <span>🖼️</span>
               <span>Görseli Doğrula</span>
+            </button>
+            <button class="post-verify-bot-btn" onclick="event.stopPropagation(); verifyPostDirectly(${post.id}, 'both')" style="background: rgba(16, 185, 129, 0.15); border-color: rgba(16, 185, 129, 0.3); color: #10B981;" title="Metin ve Görsel Manşetini Birlikte Çok Modlu Doğrula">
+              <span>✨</span>
+              <span>İkisini Birlikte Doğrula</span>
             </button>
           ` : ''}
         </div>
@@ -316,7 +320,7 @@ async function verifyPostDirectly(postId, mode = 'both') {
     setTimeout(() => { if (card) card.style.borderLeft = ''; }, 4000);
   }
 
-  const modeLabel = mode === 'text_only' ? '📝 Metni Doğrula' : mode === 'image_only' ? '🖼️ Görseli Doğrula' : '✨ Çok Modlu Doğrula';
+  const modeLabel = mode === 'text_only' ? '📝 Metni Doğrula' : mode === 'image_only' ? '🖼️ Görseli Doğrula' : '✨ İkisini Birlikte Doğrula';
   showToast('info', `🤖 ${modeLabel} modunda çalıştırılıyor...`);
   
   const panel = document.getElementById('ai-panel');
