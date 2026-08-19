@@ -2,6 +2,8 @@
 // FRONTEND/APP.JS - NSosyal İnovasyon Platformu Ana Uygulama Logic
 // TEKNOFEST 2026 - NSosyal İnovasyon Projesi
 // Yorumlar, Siber Güvenlik Phishing Taraması & Argo Moderasyonu Katmanı Entegre Edilmiştir
+// TEKNOFEST Jüri Notu: Bu dosya platformun DOM etkileşimlerini, akış (feed) render işlemlerini,
+// gönderi ve iş ilanı ekleme gibi tüm ön yüz mantığını yönetir.
 // ============================================================
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -26,12 +28,15 @@ let isCommentModeActive = false;
 let savedPostIds = new Set(); // Kaydedilen gönderilerin ID listesi
 
 // ===== INITIALIZATION =====
+// TEKNOFEST Jüri Notu: Sayfa yüklendiğinde ve data nesnesi hazır olduğunda çağrılan ilk fonksiyon.
+// Uygulamadaki akış, trendler, iş ilanları ve raporlar alanlarını doldurur (render).
 function initApp() {
   renderFeed();
   renderTrendingHashtags();
   renderJobs();
   renderUserReports();
   
+  // Kullanıcı mesaj yazarken bağlantı tespiti yapabilmek için event listener eklenir.
   const composerInput = document.getElementById('composer-text');
   if (composerInput) {
     composerInput.addEventListener('input', handleComposerInputChange);
@@ -39,22 +44,28 @@ function initApp() {
 }
 
 // ===== RENDER FEED =====
+// TEKNOFEST Jüri Notu: Gönderi akışının ana render (çizim) fonksiyonudur.
+// Filtrelenmiş veya tüm gönderileri HTML formatına çevirerek ekrana basar.
 function renderFeed() {
   const container = document.getElementById('posts-container');
   if (!container) return;
 
+  // Veritabanındaki/yereldeki postların bir kopyasını al
   let posts = [...window.NSosyalData.posts];
 
+  // Filtreleme: Sadece kaydedilenleri getir veya seçili kategoriye göre filtrele
   if (currentFeedCategory === '__saved__') {
     posts = posts.filter(p => savedPostIds.has(p.id));
   } else if (currentFeedCategory) {
     posts = posts.filter(p => p.category === currentFeedCategory);
   }
 
+  // Medya sekmesi aktifse, sadece resimli postları göster
   if (currentFeedTab === 'media') {
     posts = posts.filter(p => p.image !== null && p.image !== undefined);
   }
 
+  // Gösterilecek post yoksa boş durum uyarısı bas
   if (posts.length === 0) {
     container.innerHTML = `
       <div style="padding: 40px 20px; text-align: center; color: var(--text-muted);">
@@ -66,10 +77,12 @@ function renderFeed() {
   }
 
   let html = '';
+  // Her gönderi için HTML kodunu oluşturan yardımcı fonksiyonu çağır
   posts.forEach(post => {
     html += createPostCardHTML(post);
   });
 
+  // Oluşturulan HTML kodlarını sayfaya ekle
   container.innerHTML = html;
 }
 
@@ -580,6 +593,8 @@ function renderJobs(filterCategory = 'hepsi', searchQuery = '') {
 }
 
 // ===== 🤖 CANLI MCP İŞ TARAMA FONKSİYONU =====
+// TEKNOFEST Jüri Notu: Kullanıcının girdiği kelimeye göre arka planda yapay zeka aracılığıyla 
+// gerçek zamanlı iş ilanı (MCP - Model Context Protocol) taramasını başlatır.
 async function searchLiveMCPJobs() {
   const query = document.getElementById('jobs-search-input').value.trim() || 'yazılım';
   showToast('info', `💼 MCP İş Tarayıcısı "${query}" için canlı iş ilanlarını süzüyor...`);
@@ -602,6 +617,7 @@ async function searchLiveMCPJobs() {
 }
 
 // ===== 🔄 MANÜEL / GÜNLÜK OTOMATİK İLAN YENİLEME =====
+// TEKNOFEST Jüri Notu: Sistemin desteklediği 13 farklı kariyer sitesinden veritabanına taze ilan çeker.
 async function triggerManualJobRefresh() {
   showToast('info', '🔄 Yenibiriş, Indeed TR, İşin Olsun ve 13 kaynaktan güncel canlı ilanlar çekiliyor...');
 

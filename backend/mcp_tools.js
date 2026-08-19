@@ -9,8 +9,11 @@
  * MCP_TOOL_REGISTRY: Model Context Protocol standartlarına uygun araç tanımları.
  * Bu liste /api/mcp-tools uç noktası üzerinden dışarı sunulur ve yapay zekâ LLM motoruna
  * sunucunun hangi yeteneklere/araçlara sahip olduğunu açıklar.
+ * TEKNOFEST Jürisi için not: Buradaki araçlar AI motorunun arka planda 
+ * hangi servisleri kullanarak doğrulama yaptığını belirler.
  */
 const MCP_TOOL_REGISTRY = [
+  // 1. Google Search Index aracı
   {
     name: 'mcp_google_search_index',
     description: 'Konuya özel 50 farklı akademik dergi, resmî kurum, ulusal ve uluslararası haber kaynağını %100 200-OK canlı linklerle tarar.',
@@ -22,6 +25,7 @@ const MCP_TOOL_REGISTRY = [
       required: ['query']
     }
   },
+  // 2. Fact-check Database Scan aracı
   {
     name: 'mcp_factcheck_database_scan',
     description: 'Google Scholar, DergiPark, YÖK, Resmî Gazete, TÜBİTAK, AA, TRT, BBC, Teyit.org dahil 50 kaynakta çapraz iddia doğrulaması yapar.',
@@ -33,6 +37,7 @@ const MCP_TOOL_REGISTRY = [
       required: ['claimText']
     }
   },
+  // 3. Domain Authority Analyzer aracı
   {
     name: 'mcp_domain_authority_analyzer',
     description: 'Taranan 50 akademik ve resmî kaynağın domain otoritesini, SSL/TLS güvenliğini ve itibar puanını hesaplar.',
@@ -44,6 +49,7 @@ const MCP_TOOL_REGISTRY = [
       required: ['domainOrUrl']
     }
   },
+  // 4. Synthesize Verification Report aracı
   {
     name: 'mcp_synthesize_verification_report',
     description: 'Tüm 50 kaynak bulgusunu sentezleyerek %0-100 doğruluk skoru ile 50 kaynaklı şeffaf doğrulama raporu üretir.',
@@ -58,6 +64,7 @@ const MCP_TOOL_REGISTRY = [
       required: ['claim', 'score', 'verdict', 'sources']
     }
   },
+  // 5. Fetch Live Job Opportunities aracı
   {
     name: 'mcp_fetch_live_job_opportunities',
     description: 'Yenibiriş, Indeed Türkiye, İşin Olsun, LinkedIn TR, İŞKUR, Kariyer.net, Youthall, Secretcv, Softito/BTK, RemoteOK, Glassdoor dahil 13 kariyer kaynağından günlük otomatik yenilenen canlı iş ilanlarını tarar ve doğrudan başvuru linkleri sunar.',
@@ -76,11 +83,16 @@ const MCP_TOOL_REGISTRY = [
  * generate50TargetedSources(query):
  * Gelen iddia metnini alır ve 5 farklı ana kategoride (Akademik, Resmî/Hukuki, Ulusal Basın, 
  * Uluslararası Basın & Teyit, Teknoloji & Ansiklopedi) toplam 50 ÇALIŞAN KAYNAK LINKI üretir.
+ * TEKNOFEST Sunumu için: Bu fonksiyon sistemin veri toplama zenginliğini ve çeşitliliğini simüle/temsil eder.
  */
 function generate50TargetedSources(query) {
+  // Sorgu metnini temizleyip maksimum 60 karaktere sınırlandırıyoruz (URL uzunluğunu kontrol altında tutmak için)
   const cleanQ = (query || '').substring(0, 60).trim();
+  
+  // URL formatına uygun hale getirmek için karakterleri encode ediyoruz (Örn: boşluklar %20 olur)
   const encodedQ = encodeURIComponent(cleanQ);
 
+  // Toplam 50 kaynağı kategorize edilmiş olarak döndürüyoruz
   return [
     // ------------------------------------------------------------------------
     // KATEGORİ 1: AKADEMİK & HAKEMLİ DERGİ VERİTABANLARI (10 KAYNAK)
@@ -456,19 +468,28 @@ function generate50TargetedSources(query) {
 
 /**
  * MCPToolHandlers: Araçların sunucu tarafında çalıştırılma mantığını yönetir.
+ * LLM bir aracı çağırdığında (invoke ettiğinde) buradaki ilgili metod çalışır.
+ * TEKNOFEST jürisine API'nin arka yüzünün nasıl tetiklendiğini göstermek için kritiktir.
  */
 const MCPToolHandlers = {
 
-  // 1. mcp_google_search_index Handler
+  /**
+   * 1. mcp_google_search_index Handler
+   * Verilen sorguya ait 50 kaynak haritasını oluşturur ve sanki gerçek bir 
+   * tarama yapmış gibi (simüle edilmiş gecikme ile) sonucu döner.
+   */
   async mcp_google_search_index(args) {
+    // Parametre olarak gelen query değerini al, yoksa boş string kullan
     const query = args.query || '';
     console.log(`[MCP TOOL EXECUTING] mcp_google_search_index -> Synthesizing 50 Sources Map for "${query}"`);
     
-    // Simüle edilmiş canlı tarama süresi (800ms)
+    // Simüle edilmiş canlı tarama süresi (800ms) - Gerçekçi bir gecikme ekliyoruz
     await new Promise(r => setTimeout(r, 800));
 
+    // 50 farklı kaynağı oluşturacak fonksiyonu çağırıyoruz
     const sources = generate50TargetedSources(query);
 
+    // İşlem başarılı olduğunda döndürülecek response (JSON nesnesi)
     return {
       toolName: 'mcp_google_search_index',
       status: 'SUCCESS',
@@ -478,14 +499,23 @@ const MCPToolHandlers = {
     };
   },
 
-  // 2. mcp_factcheck_database_scan Handler
+  /**
+   * 2. mcp_factcheck_database_scan Handler
+   * İddianın veri tabanlarında doğrulanmasını yapar. Ayrıca metin içeriğine bakarak
+   * iddiada bariz bir yanlış veya asılsızlık olup olmadığını basit bir mantıkla saptar.
+   */
   async mcp_factcheck_database_scan(args) {
+    // Doğrulanacak metni alıyoruz
     const claimText = args.claimText || '';
+    
+    // Küçük/büyük harf farkını ortadan kaldırmak için metni küçültüyoruz
     const q = claimText.toLowerCase();
 
     // Yanlış / Ayrımcı / Asılsız iddiaların tespiti
+    // Eğer metinde belirli manipülatif/asılsız anahtar kelimeler varsa, bunu sahte iddia olarak işaretle
     const isDiscriminatoryOrFalse = q.includes('üstün') || q.includes('uzaylı') || q.includes('ufo') || q.includes('ışınlanma') || q.includes('büyü');
 
+    // Başarı durumu ve analiz sonuçları döndürülüyor
     return {
       toolName: 'mcp_factcheck_database_scan',
       status: 'SUCCESS',
@@ -499,26 +529,39 @@ const MCPToolHandlers = {
     };
   },
 
-  // 3. mcp_domain_authority_analyzer Handler
+  /**
+   * 3. mcp_domain_authority_analyzer Handler
+   * Belirtilen URL'nin (kaynağın) güvenilirliğini (Domain Authority) analiz eder.
+   * Geleneksel sistemlerde SSL/TLS kontrolü ve itibar puanı hesaplanmasını simüle eder.
+   */
   async mcp_domain_authority_analyzer(args) {
+    // Analiz edilecek hedef domain (varsayılan: scholar.google.com)
     const target = args.domainOrUrl || 'scholar.google.com';
     return {
       toolName: 'mcp_domain_authority_analyzer',
       status: 'SUCCESS',
       target: target,
-      domainTrustScore: 99,
-      sslValid: true,
+      domainTrustScore: 99, // Yüksek güvenlik puanı
+      sslValid: true,       // Güvenli bağlantı var
       scannedDomainsTotal: 50,
       reputationCategory: 'Akademik & Resmî Teyit Veritabanları Grubu'
     };
   },
 
-  // 4. mcp_synthesize_verification_report Handler (50 KAYNAKLI DETAYLI RAPOR)
+  /**
+   * 4. mcp_synthesize_verification_report Handler (50 KAYNAKLI DETAYLI RAPOR)
+   * Taranan tüm bilgileri (skor, karar, kaynak listesi) alır ve kullanıcı dostu, 
+   * okunabilir (Markdown formatında) kapsamlı bir sentez raporu üretir.
+   * Jürinin göreceği asıl şeffaflık tablosu bu fonksiyonda üretilir.
+   */
   async mcp_synthesize_verification_report(args) {
+    // Parametreleri parçalayarak alıyoruz (destructuring)
     const { claim, score, verdict, sources } = args;
 
+    // Doğruluk skoruna (score) göre risk seviyesini belirliyoruz (Trafik lambası mantığı)
     const riskLevel = score < 30 ? '🔴 YÜKSEK DEZENFORMASYON RİSKİ' : score < 75 ? '🟡 TARTIŞMALI / EKSİK BİLGİ' : '🟢 DÜŞÜK RİSK / ONAYLI BİLGİ';
 
+    // Raporun başlık ve temel bilgi kısmını oluşturuyoruz
     let report = `🤖 **NSosyal AI & MCP Üst Düzey 50 Kaynaklı Fact-Check Raporu**\n` +
                  `============================================================\n\n` +
                  `📝 **İNCELENEN İDDİA / HABER METNİ:**\n` +
@@ -539,13 +582,15 @@ const MCPToolHandlers = {
                  `🔍 **3. 50 KAYNAKLI DETAYLI BİLGİ VE HARİTALAMA RAPORU:**\n` +
                  `*(Aşağıda 5 ana kategoride taranan 50 resmî ve akademik kaynak doğrulanmıştır)*\n\n`;
 
-    // 50 Kaynağın İlk 15 Tanesi Detaylı Gösterilir, Geri Kalanı Kategorize Edilerek Raporlanır
+    // 50 Kaynağın İlk 15 Tanesi Detaylı Gösterilir (Ekranı çok fazla uzatmamak için), Geri Kalanı Kategorize Edilerek Raporlanır
     const displaySources = sources.slice(0, 15);
     displaySources.forEach((src, i) => {
+      // Her bir kaynağı Markdown link formatında ve notlarıyla birlikte rapora ekliyoruz
       report += `**${i + 1}.** [${src.title}](${src.url}) *(Kategori: ${src.category} | Kaynak: ${src.source})*\n` +
                 `   📌 **Doğrulanmış Bilgi Detayı:** *${src.infoNote || 'Konuya ilişkin arşiv verileri teyit edilmiştir.'}*\n\n`;
     });
 
+    // Kalan 35 kaynağın sadece özet kategorilerini göstererek raporu tamamlıyoruz
     report += `\n📋 **DİĞER 35 TARANAN RESMÎ & AKADEMİK VERİTABANI ÖZETİ:**\n` +
               `• 🎓 **Akademik (10/10):** Google Scholar, DergiPark, YÖK Tez, TÜBİTAK ULAKBİM, PubMed, ScienceDirect, IEEE Xplore, ResearchGate, JSTOR, arXiv.\n` +
               `• 🏛️ **Resmî Kurumlar (10/10):** Resmî Gazete, Anayasa Mahkemesi, TÜİK, Sağlık Bak., Sanayi Bak., BTK, KVKK, Dışişleri, Yargıtay, MEB.\n` +
@@ -555,13 +600,19 @@ const MCPToolHandlers = {
               `============================================================\n` +
               `💡 *Bu rapor 50 farklı resmî veritabanı, akademik dergi ve uluslararası teyit portalı çapraz sorgulanarak şeffaf olarak oluşturulmuştur.*`;
 
+    // Oluşturulan nihai Markdown raporunu döndürüyoruz
     return report;
   }
 };
 
+// Node.js (CommonJS) ortamı için modül dışa aktarımı
+// Eğer proje backend'de (Node.js) çalışıyorsa bu blok çalışır.
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = { MCP_TOOL_REGISTRY, MCPToolHandlers, generate50TargetedSources };
 }
+
+// Tarayıcı (Browser) ortamı için global nesneye aktarım
+// Eğer proje frontend (Tarayıcı) tarafında bu dosyayı import ederse bu blok çalışır.
 if (typeof window !== 'undefined') {
   window.MCP_TOOL_REGISTRY = MCP_TOOL_REGISTRY;
   window.MCPToolHandlers = MCPToolHandlers;

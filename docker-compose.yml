@@ -1,28 +1,40 @@
+# Docker Compose konfigürasyon sürümü (3.8 tavsiye edilen stabil sürüm)
 version: '3.8'
 
 services:
-  # Node.js ve Python Bağımlı Backend Servisi
+  # 1. Backend Servisi: Node.js API ve Python betiklerini içerir
   backend:
+    # Geçerli dizindeki Dockerfile kullanılarak imaj oluşturulur
     build: .
+    # Konteynerin adı belirlenir
     container_name: nsosyal_backend
+    # Konteyner durursa veya sistem yeniden başlarsa servisi otomatik olarak yeniden başlatır
     restart: always
+    # Host makinenin 3006 portunu, konteynerin 3006 portuna eşler
     ports:
       - "3006:3006"
+    # Çevresel değişkenleri (API key vb.) .env dosyasından alır
     env_file:
       - .env
+    # Host ve konteyner arasında veri kalıcılığını sağlamak için volume tanımlamaları
     volumes:
+      # Veritabanı dosyasının kaybolmaması için lokal disk ile senkronize edilir
       - ./backend/database.db:/app/backend/database.db
+      # Üretilen Word raporlarının dışarıdan erişilebilmesi için senkronize edilir
       - ./frontend/reports:/app/frontend/reports
 
-  # Nginx Ters Vekil Sunucusu ve WAF/Rate Limiting Servisi
+  # 2. Nginx Servisi: Ters Vekil (Reverse Proxy) ve Güvenlik Duvarı (WAF) Görevini Üstlenir
   nginx:
+    # Nginx'in resmi hafif Alpine imajı kullanılır
     image: nginx:alpine
     container_name: nsosyal_nginx
     restart: always
+    # HTTP trafiğini (80 portu) dinler
     ports:
       - "80:80"
     volumes:
-      # Projedeki nginx.conf dosyasını container içerisine mount ediyoruz
+      # Projedeki özel nginx.conf yapılandırma dosyasını container içerisine salt-okunur (ro) olarak mount ediyoruz
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    # Nginx'in çalışması backend servisinin ayakta olmasına bağlıdır, önce backend başlar
     depends_on:
       - backend

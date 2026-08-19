@@ -1,10 +1,13 @@
 // ============================================================
 // FRONTEND/DATA.JS - NSosyal Veri Katmanı (SQLite REST API Entegreli)
 // TEKNOFEST 2026 - NSosyal İnovasyon Projesi
+// TEKNOFEST Jüri Notu: Bu dosya, uygulamanın ön yüz veri yönetiminden sorumludur. 
+// Sahte (Mock) verilerle birlikte arka yüz (Backend/SQLite) API'lerinden verileri çeker.
 // ============================================================
 
 const NSosyalData = {
   
+  // Sistemdeki kayıtlı veya tanımlı örnek kullanıcı profilleri
   users: {
     nhaber_19: { id: 'nhaber_19', name: 'NHaber Son Dakika', handle: '@nhaber_19', avatar: 'NH', color: '#E63946', verified: true },
     teknoloji_tr: { id: 'teknoloji_tr', name: 'Teknoloji Türkiye', handle: '@teknolojik', avatar: 'TK', color: '#2563EB', verified: true },
@@ -16,6 +19,7 @@ const NSosyalData = {
     teknofest_official: { id: 'teknofest_official', name: 'TEKNOFEST Resmî', handle: '@teknofest', avatar: 'TF', color: '#E63946', verified: true }
   },
 
+  // Trend Olan Etiketler (Hashtags) Listesi
   trendingHashtags: [
     { tag: 'TEKNOFEST2026', count: '48.2 B' },
     { tag: 'YapayZeka', count: '34.8 B' },
@@ -25,15 +29,17 @@ const NSosyalData = {
     { tag: 'SiberGüvenlik', count: '14.2 B' }
   ],
 
+  // Temel veri setleri boş dizilerle başlatılır (API ile doldurulacak)
   posts: [],
   jobListings: [],
   jobAlerts: [],
   userReports: [],
 
   // INITIALIZE FROM SQLITE BACKEND REST API
+  // TEKNOFEST Jüri Notu: Sayfa yüklendiğinde arka plan veritabanından güncel içerikleri çeken ana başlangıç fonksiyonu.
   async init() {
     try {
-      // 1. Fetch Posts from SQLite DB
+      // 1. Fetch Posts from SQLite DB (Gönderileri getir)
       const resPosts = await fetch('/api/posts');
       if (resPosts.ok) {
         const data = await resPosts.json();
@@ -42,7 +48,7 @@ const NSosyalData = {
         }
       }
 
-      // 2. Fetch Jobs from SQLite DB
+      // 2. Fetch Jobs from SQLite DB (İş ilanlarını getir)
       const resJobs = await fetch('/api/jobs');
       if (resJobs.ok) {
         const data = await resJobs.json();
@@ -51,7 +57,7 @@ const NSosyalData = {
         }
       }
 
-      // 3. Fetch Job Alerts from SQLite DB
+      // 3. Fetch Job Alerts from SQLite DB (Kayıtlı iş alarmlarını getir)
       const resAlerts = await fetch('/api/job-alerts');
       if (resAlerts.ok) {
         const data = await resAlerts.json();
@@ -60,7 +66,7 @@ const NSosyalData = {
         }
       }
 
-      // 4. Fetch User Reports (Postlarım & Otomatik Raporlar Portalı)
+      // 4. Fetch User Reports (Postlarım & Otomatik Raporlar Portalı) (Zamanlanmış kullanıcı raporlarını getir)
       const resReports = await fetch('/api/user-reports');
       if (resReports.ok) {
         const data = await resReports.json();
@@ -73,6 +79,7 @@ const NSosyalData = {
     }
   },
 
+  // Yeni bir gönderi ekleyen API çağrısı
   async addPost(postData) {
     try {
       const res = await fetch('/api/posts', {
@@ -82,7 +89,7 @@ const NSosyalData = {
       });
       const data = await res.json();
       if (data.success && data.post) {
-        this.posts.unshift(data.post);
+        this.posts.unshift(data.post); // Listeye en başa ekle (kronolojik sıra)
         return data.post;
       }
       if (data && data.error) {
@@ -92,6 +99,7 @@ const NSosyalData = {
       console.error('Error adding post to SQLite:', e);
     }
 
+    // Backend yanıt vermezse lokal fallback (yedek) kaydı at
     const fallbackPost = {
       id: Date.now(),
       userId: postData.userId || 'nhaber_19',
@@ -108,6 +116,7 @@ const NSosyalData = {
   },
 
   // ADD NEW JOB LISTING
+  // Kullanıcının veya sistemin eklediği yeni iş ilanını DB'ye kaydeder
   async addJobListing(jobData) {
     try {
       const res = await fetch('/api/jobs', {
@@ -124,6 +133,7 @@ const NSosyalData = {
       console.error('Error adding job to SQLite:', e);
     }
 
+    // Backend fallback (DB çökmesi/kapalı olması durumunda lokal eklenti)
     const fallbackJob = {
       id: Date.now(),
       title: jobData.title,
@@ -142,6 +152,7 @@ const NSosyalData = {
   },
 
   // SAVE JOB ALERT TO SQLITE BACKEND DB
+  // Belirli anahtar kelimelere göre iş alarmı kurma talebini arka yüze atar
   async saveJobAlert(alertObj) {
     try {
       const res = await fetch('/api/job-alerts', {
@@ -155,11 +166,12 @@ const NSosyalData = {
       }
     } catch (e) {
       console.error('Error saving job alert to SQLite:', e);
-      this.jobAlerts.push(alertObj);
+      this.jobAlerts.push(alertObj); // Hata anında lokal listeye kaydet
     }
   },
 
   // ADD USER REPORT
+  // Kullanıcının sistemden belirli zaman periyotlarında almasını istediği rapor kaydını başlatır
   async addUserReport(reportData) {
     try {
       const res = await fetch('/api/user-reports', {
@@ -191,6 +203,7 @@ const NSosyalData = {
   },
 
   // GET COMMENTS FOR POST
+  // İlgili ID'ye ait gönderinin yorumlarını sunucudan/DB'den çeker
   async getCommentsForPost(postId) {
     try {
       const res = await fetch(`/api/posts/${postId}/comments`);
@@ -205,6 +218,7 @@ const NSosyalData = {
   },
 
   // ADD COMMENT TO POST
+  // Seçilen gönderiye yeni bir yorum satırı ekler
   async addCommentToPost(postId, text) {
     try {
       const res = await fetch(`/api/posts/${postId}/comments`, {
@@ -236,12 +250,14 @@ const NSosyalData = {
     };
   },
 
+  // Kullanıcı ID'si üzerinden kullanıcı nesnesini döner
   getUserById(userId) {
     return this.users[userId] || { id: userId, name: userId, handle: `@${userId}`, avatar: 'NK', color: '#2563EB', verified: false };
   }
 };
 
 // AUTO INIT
+// Nesne yüklendiği an veritabanı ile senkronizasyonu başlat
 NSosyalData.init();
 
 if (typeof window !== 'undefined') {

@@ -4,18 +4,26 @@
 // 50 ADET ZENGİN TEKNOLOJİ İŞ İLANI (32 YERLİ + 18 YABANCI GLOBAL)
 // ============================================================
 
+// SQLite3 veritabanı modülünü dahil ediyoruz. Verbose modu hataları daha detaylı görmemizi sağlar.
 const sqlite3 = require('sqlite3').verbose();
+// Dosya yollarıyla çalışmak için path modülünü dahil ediyoruz.
 const path = require('path');
 
+// Veritabanı dosyasının tam yolunu belirliyoruz.
 const dbPath = path.join(__dirname, 'database.db');
+// SQLite veritabanı bağlantısını başlatıyoruz.
 const db = new sqlite3.Database(dbPath, (err) => {
+  // Eğer bağlantıda bir hata oluşursa konsola yazdırıyoruz.
   if (err) console.error('SQLite Veritabanı bağlantı hatası:', err.message);
+  // Hata yoksa başarıyla bağlandığımızı bildiriyoruz.
   else console.log('📁 SQLite Veritabanı bağlı: backend/database.db');
 });
 
 // TABLOLARI OLUŞTUR VE YENİ SÜTUNLARI EKLE
+// db.serialize, içindeki işlemlerin sırayla (senkron olarak) yapılmasını garanti eder.
 db.serialize(() => {
-  // TABLE 1: posts
+  // TABLE 1: posts (Kullanıcı paylaşımları/haberleri)
+  // posts tablosunu oluşturuyoruz. Bu tablo platformdaki gönderileri tutar.
   db.run(`
     CREATE TABLE IF NOT EXISTS posts (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -37,7 +45,8 @@ db.serialize(() => {
     )
   `);
 
-  // TABLE 2: jobs
+  // TABLE 2: jobs (İş ilanları)
+  // jobs tablosunu oluşturuyoruz. Bu tablo toplanan veya eklenen iş ilanlarını içerir.
   db.run(`
     CREATE TABLE IF NOT EXISTS jobs (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -63,18 +72,22 @@ db.serialize(() => {
   `);
 
   // Sütun güncellemeleri
+  // Mevcut jobs tablosuna yeni sütunlar eklemek için kullanılacak dizi
   const columnsToAdd = [
-    { name: 'applyUrl', type: 'TEXT' },
-    { name: 'sourceSite', type: 'TEXT' },
-    { name: 'sourceType', type: 'TEXT DEFAULT "local"' },
-    { name: 'flag', type: 'TEXT DEFAULT "🇹🇷"' }
+    { name: 'applyUrl', type: 'TEXT' }, // Başvuru linki
+    { name: 'sourceSite', type: 'TEXT' }, // İlanın kaynağı (örn. LinkedIn)
+    { name: 'sourceType', type: 'TEXT DEFAULT "local"' }, // İlanın tipi (yerli/yabancı)
+    { name: 'flag', type: 'TEXT DEFAULT "🇹🇷"' } // Kaynağa göre bayrak emojisi
   ];
 
+  // Her bir yeni sütun için ALTER TABLE sorgusu çalıştırıyoruz.
+  // Eğer sütun zaten varsa hata fırlatır ama bu hataları görmezden geliyoruz.
   columnsToAdd.forEach(col => {
     db.run(`ALTER TABLE jobs ADD COLUMN ${col.name} ${col.type}`, (err) => {});
   });
 
-  // TABLE 3: job_alerts
+  // TABLE 3: job_alerts (İş ilanı bildirim abonelikleri)
+  // Kullanıcıların iş alarmı kurdukları kriterleri tutan tablo
   db.run(`
     CREATE TABLE IF NOT EXISTS job_alerts (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -84,7 +97,8 @@ db.serialize(() => {
     )
   `);
 
-  // TABLE 4: user_reports
+  // TABLE 4: user_reports (Kullanıcı analiz ve doğrulama raporları)
+  // Sistem tarafından oluşturulan gündem ve haber doğrulama raporlarını tutan tablo
   db.run(`
     CREATE TABLE IF NOT EXISTS user_reports (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -98,7 +112,8 @@ db.serialize(() => {
     )
   `);
 
-  // TABLE 5: post_comments
+  // TABLE 5: post_comments (Gönderi yorumları)
+  // Gönderilere yapılan kullanıcı yorumlarını tutan tablo
   db.run(`
     CREATE TABLE IF NOT EXISTS post_comments (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -112,7 +127,9 @@ db.serialize(() => {
   `);
 
   // 🔄 62 ADET TEKNOLOJİ İŞ İLANI TOHUMLAMA (13 FARKLI KARİYER KAYNAĞI)
+  // jobs tablosunda belirli kaynaklardan gelen ilanların sayısını kontrol ediyoruz.
   db.get("SELECT COUNT(*) as count FROM jobs WHERE sourceSite IN ('Yenibiriş', 'Indeed Türkiye', 'İşin Olsun')", (err, row) => {
+    // Eğer veritabanında yeterli ilan yoksa (count < 12), seedJobs fonksiyonunu çağırarak başlangıç verilerini yüklüyoruz.
     if (err || !row || row.count < 12) {
       console.log('🌱 62 Zengin Teknoloji İş İlanı Yenibiriş, Indeed TR, İşin Olsun dahil 13 kaynaktan veritabanına ekleniyor...');
       seedJobs();
@@ -120,9 +137,16 @@ db.serialize(() => {
   });
 });
 
+/**
+ * seedJobs fonksiyonu
+ * Veritabanını başlangıç iş ilanlarıyla doldurmak için kullanılır.
+ * Önce mevcut tüm iş ilanlarını siler, ardından initialJobs dizisindeki ilanları ekler.
+ */
 function seedJobs() {
+  // Mevcut ilanları siliyoruz (Temiz bir başlangıç için)
   db.run("DELETE FROM jobs");
 
+  // Veritabanına eklenecek olan zengin ilan verileri dizisi
   const initialJobs = [
     // ------------------------------------------------------------------------
     // 🇹🇷 YERLİ KAYNAKLAR (44 ADET TEKNOLOJİ İLANI - %100 LİNK GARANTİLİ)
@@ -684,11 +708,13 @@ function seedJobs() {
     }
   ];
 
+  // Parametreli SQL sorgusu hazırlıyoruz (SQL Injection'ı önlemek için).
   const stmt = db.prepare(`
     INSERT INTO jobs (title, company, logo, color, location, type, salary, category, skills, applicants, postedAt, urgent, isNew, applyUrl, sourceSite, sourceType, flag)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
 
+  // Her bir ilan verisi için SQL sorgusunu çalıştırıyoruz.
   initialJobs.forEach(job => {
     stmt.run([
       job.title, job.company, job.logo, job.color, job.location, job.type, job.salary,
@@ -697,30 +723,42 @@ function seedJobs() {
     ]);
   });
 
+  // Hazırlanan sorguyu sonlandırıp bellekten temizliyoruz.
   stmt.finalize();
   console.log('✅ 50 Zengin Teknoloji İş İlanı SQLite veritabanına başarıyla tohumlandı!');
 }
 
+// Tüm veritabanı operasyonlarını barındıran servis objesi
 const DBService = {
+  /**
+   * Gönderileri (posts) veritabanından getirir.
+   * En yeniden en eskiye doğru sıralar.
+   */
   getPosts() {
     return new Promise((resolve, reject) => {
+      // Tüm gönderileri ID'ye göre azalan sırayla çekiyoruz
       db.all("SELECT * FROM posts ORDER BY id DESC", (err, rows) => {
-        if (err) return reject(err);
+        if (err) return reject(err); // Hata varsa reddet
+        // Veritabanından gelen veriyi frontend'in beklediği formata dönüştürüyoruz
         const formatted = rows.map(r => ({
           ...r,
-          hashtags: r.hashtags ? r.hashtags.split(',') : [],
-          isLive: Boolean(r.isLive),
+          hashtags: r.hashtags ? r.hashtags.split(',') : [], // Virgülle ayrılmış string'i diziye çevir
+          isLive: Boolean(r.isLive), // 0/1 değerlerini boolean'a çevir
           isNew: Boolean(r.isNew),
           saved: Boolean(r.saved),
           liked: Boolean(r.liked)
         }));
-        resolve(formatted);
+        resolve(formatted); // Formatlanmış veriyi döndür
       });
     });
   },
 
+  /**
+   * Veritabanına yeni bir gönderi (post) ekler.
+   */
   addPost(postData) {
     return new Promise((resolve, reject) => {
+      // Hashtag'leri dizi formunda gelmişse string'e çeviriyoruz, yoksa varsayılan değer atıyoruz
       const hashtagsStr = Array.isArray(postData.hashtags) ? postData.hashtags.join(',') : (postData.hashtags || '#NSosyal,#Haber');
       const stmt = db.prepare(`
         INSERT INTO posts (userId, category, text, hashtags, likes, shares, comments, time, image, url, isLive, isNew, saved, liked)
@@ -750,14 +788,19 @@ const DBService = {
     });
   },
 
+  /**
+   * İş ilanlarını veritabanından çeker.
+   */
   getJobs() {
     return new Promise((resolve, reject) => {
+      // En son eklenen ilanları en başta göstermek için azalan sıralama yapıyoruz
       db.all("SELECT * FROM jobs ORDER BY id DESC", (err, rows) => {
         if (err) return reject(err);
+        // İlan verilerini formatlıyoruz
         const formatted = rows.map(r => ({
           ...r,
-          skills: r.skills ? r.skills.split(',') : [],
-          urgent: Boolean(r.urgent),
+          skills: r.skills ? r.skills.split(',') : [], // Becerileri string'den diziye çevir
+          urgent: Boolean(r.urgent), // 0/1 değerlerini boolean yap
           isNew: Boolean(r.isNew)
         }));
         resolve(formatted);
@@ -765,9 +808,14 @@ const DBService = {
     });
   },
 
+  /**
+   * Veritabanına yeni bir iş ilanı ekler.
+   */
   addJob(jobData) {
     return new Promise((resolve, reject) => {
+      // Gelen becerileri string'e dönüştürüyoruz, aksi halde varsayılan ekliyoruz
       const skillsStr = Array.isArray(jobData.skills) ? jobData.skills.join(',') : (jobData.skills || 'React,Node.js');
+      // Logo gönderilmemişse şirket adının ilk 2 harfini alıyoruz
       const logo = (jobData.company || 'SY').substring(0, 2).toUpperCase();
       const color = jobData.color || '#2563EB';
       const location = jobData.location || 'İstanbul (Uzaktan)';
@@ -805,6 +853,9 @@ const DBService = {
     });
   },
 
+  /**
+   * İş alarmı kayıtlarını (job_alerts) getirir.
+   */
   getJobAlerts() {
     return new Promise((resolve, reject) => {
       db.all("SELECT * FROM job_alerts ORDER BY id DESC", (err, rows) => {
@@ -814,6 +865,9 @@ const DBService = {
     });
   },
 
+  /**
+   * Yeni bir iş alarmı kaydı oluşturur.
+   */
   addJobAlert(criteria, email = null) {
     return new Promise((resolve, reject) => {
       const stmt = db.prepare("INSERT INTO job_alerts (criteria, email) VALUES (?, ?)");
@@ -825,6 +879,9 @@ const DBService = {
     });
   },
 
+  /**
+   * Kullanıcı ve gündem doğrulama raporlarını getirir.
+   */
   getUserReports() {
     return new Promise((resolve, reject) => {
       db.all("SELECT * FROM user_reports ORDER BY id DESC", (err, rows) => {
@@ -834,6 +891,9 @@ const DBService = {
     });
   },
 
+  /**
+   * Sisteme yeni bir haber/gündem doğrulama raporu ekler.
+   */
   addUserReport(reportData) {
     return new Promise((resolve, reject) => {
       const stmt = db.prepare(`
@@ -859,8 +919,12 @@ const DBService = {
     });
   },
 
+  /**
+   * Belirli bir gönderiye (postId) ait yorumları getirir.
+   */
   getComments(postId) {
     return new Promise((resolve, reject) => {
+      // Yorumları id'ye göre artan sırada (eskiden yeniye) alıyoruz
       db.all("SELECT * FROM post_comments WHERE postId = ? ORDER BY id ASC", [postId], (err, rows) => {
         if (err) return reject(err);
         resolve(rows);
@@ -868,8 +932,12 @@ const DBService = {
     });
   },
 
+  /**
+   * Bir gönderiye yeni bir yorum ekler ve gönderinin yorum sayısını artırır.
+   */
   addComment(postId, commentData) {
     return new Promise((resolve, reject) => {
+      // Kullanıcı bilgilerini ve yorum metnini alıyoruz (veya varsayılan değer kullanıyoruz)
       const userName = commentData.userName || 'NSosyal Kullanıcı';
       const userAvatar = commentData.userAvatar || 'NK';
       const userColor = commentData.userColor || '#2563EB';

@@ -6,24 +6,36 @@
 
 const nodemailer = require('nodemailer');
 
+// Ortam değişkenlerinden (env) Gmail hesabı ve uygulama parolasını al. Yoksa demo verileri kullan.
 const gmailUser = process.env.GMAIL_USER || 'demo@gmail.com';
 const gmailPass = process.env.GMAIL_PASS || 'demo_password';
 
 // SMTP Transporter Oluşturulması
+// Nodemailer ile e-posta gönderebilmek için Gmail SMTP ayarları yapılandırılıyor.
 const transporter = nodemailer.createTransport({
-  service: 'gmail',
+  service: 'gmail', // Gmail hizmeti kullanılacak
   auth: {
-    user: gmailUser,
-    pass: gmailPass
+    user: gmailUser, // Gönderen e-posta adresi
+    pass: gmailPass  // Güvenlik için Gmail "Uygulama Şifresi"
   }
 });
 
 /**
- * sendReportEmail: Zamanlanmış raporları kullanıcı e-postasına HTML şablonuyla iletir.
+ * sendReportEmail: Zamanlanmış raporları kullanıcı e-postasına özel bir HTML şablonuyla iletir.
+ * @param {string} targetEmail - Raporun gönderileceği alıcı e-posta adresi.
+ * @param {string} reportTitle - E-postanın ve raporun başlığı.
+ * @param {string} frequency - Raporun zamanlama sıklığı (Örn: Günlük, Haftalık).
+ * @param {string} summaryText - Rapor içeriği ve haber akış özeti.
+ * @param {number|string} score - Sistem tarafından belirlenen doğruluk skoru.
+ * @param {string} verdict - Sistemin kararı (Doğru, Yanlış, Yarı Doğru vb.).
+ * @param {string} wordDownloadUrl - Hazırlanan Word dökümanının indirme bağlantısı.
+ * @returns {object} - Gönderim işleminin başarılı olup olmadığını ve mesaj kimliğini (ID) döndürür.
  */
 async function sendReportEmail(targetEmail, reportTitle, frequency, summaryText, score, verdict, wordDownloadUrl) {
+  // Eğer alıcı e-posta adresi belirtilmemişse varsayılan gönderici adresine gönder
   const recipient = targetEmail || gmailUser;
 
+  // E-postanın tasarımını oluşturan HTML içeriği (Modern ve karanlık tema kullanılarak hazırlanmıştır)
   const htmlContent = `
     <div style="font-family: 'Segoe UI', Arial, sans-serif; background-color: #0F172A; color: #F8FAFC; padding: 24px; border-radius: 12px; max-width: 650px; margin: 0 auto; border: 1px solid #1E293B;">
       <div style="border-bottom: 2px solid #2563EB; padding-bottom: 12px; margin-bottom: 20px;">
@@ -56,21 +68,26 @@ async function sendReportEmail(targetEmail, reportTitle, frequency, summaryText,
     </div>
   `;
 
+  // Nodemailer üzerinden gönderilecek posta ayarları (Kimden, Kime, Konu ve HTML)
   const mailOptions = {
     from: `"NSosyal AI Otomasyon" <${gmailUser}>`,
     to: recipient,
-    subject: `📬 [NSosyal Raporu] ${reportTitle} - (${frequency})`,
-    html: htmlContent
+    subject: `📬 [NSosyal Raporu] ${reportTitle} - (${frequency})`, // E-postanın konusu
+    html: htmlContent // Hazırlanan şık HTML teması
   };
 
   try {
+    // Transporter aracılığıyla maili gönder ve sonucu bekle
     const info = await transporter.sendMail(mailOptions);
+    // Başarıyla gönderildiğinde logla
     console.log(`📧 [GMAIL SMTP] E-Posta Raporu Başarıyla Gönderildi -> ${recipient} (Message ID: ${info.messageId})`);
     return { success: true, messageId: info.messageId };
   } catch (err) {
+    // Hata oluştuysa konsola bas (Ama sistemi durdurma)
     console.log(`📧 [GMAIL SMTP NOTİFİKASYON] E-Posta Gönderim Logu: ${err.message} (E-Posta Şablonu Hazırlandı ve İletildi)`);
     return { success: false, error: err.message };
   }
 }
 
+// Modülü dışarı aktar
 module.exports = { sendReportEmail };

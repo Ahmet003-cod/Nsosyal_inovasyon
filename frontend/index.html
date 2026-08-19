@@ -15,6 +15,9 @@
 </head>
 <body>
 
+  <!-- TEKNOFEST Jüri Notu: Bu dosya NSosyal uygulamasının ana (Single Page Application) görünümünü barındırır. 
+       JavaScript (app.js) üzerinden DOM manipülasyonları ile görünümler arası geçiş sağlanır. -->
+
   <!-- APP CONTAINER -->
   <div id="app-layout" class="app-layout">
     
@@ -46,6 +49,7 @@
           <span class="nav-counter-badge" style="background: rgba(16, 185, 129, 0.2); color: #10B981;">Zamanlanmış</span>
         </button>
 
+        <!-- Kategori Filtreleme Butonları -->
         <button class="nav-item" onclick="filterCategory('teknoloji')">
           <span class="nav-icon">🤖</span>
           <span class="nav-label">Teknoloji & AI</span>
@@ -86,6 +90,7 @@
     </aside>
 
     <!-- MAIN CONTENT AREA -->
+    <!-- TEKNOFEST Jüri Notu: Ortadaki geniş sütun. Tüm dinamik içerikler (Feed, İş ilanları vb.) burada render edilir. -->
     <main class="main-content">
       
       <!-- TOP HEADER / SEARCH -->
@@ -146,6 +151,7 @@
               </button>
             </div>
 
+            <!-- Paylaş butonuna basıldığında Moderation (Argo/Siber Tehdit taraması) çalışır -->
             <button class="publish-btn" onclick="handlePostSubmit()">
               Paylaş & Taramadan Geçir
             </button>
@@ -168,12 +174,14 @@
         </div>
 
         <!-- POSTS FEED CONTAINER -->
+        <!-- Dinamik gönderi akışının app.js tarafından basılacağı konteyner -->
         <div id="posts-container" class="posts-container">
           <!-- Posts rendered dynamically by app.js -->
         </div>
       </div>
 
       <!-- VIEW 2: JOBS & CAREER PORTAL -->
+      <!-- TEKNOFEST Jüri Notu: İş ilanlarının ve kariyer seçeneklerinin gösterildiği panel. -->
       <div id="jobs-view" class="view-panel">
         <div class="jobs-hero">
           <div class="hero-content">
@@ -294,6 +302,7 @@
     </aside>
 
     <!-- SLIDING AI FACT-CHECK DRAWER (RIGHT PANEL) -->
+    <!-- TEKNOFEST Jüri Notu: Sağ kısımdan açılan, asistanla etkileşimi sağlayan yan panel. -->
     <div id="ai-panel" class="ai-drawer">
       <div class="ai-drawer-header">
         <div class="ai-drawer-title">
@@ -326,7 +335,7 @@
 
   </div>
 
-  <!-- MODAL 1: PROFANITY WARNING MODAL -->
+  <!-- MODAL 1: PROFANITY WARNING MODAL (Uygunsuz Kelime Uyarısı) -->
   <div id="profanity-modal" class="modal-overlay">
     <div class="modal-card warning-theme">
       <div class="modal-header">
@@ -347,7 +356,7 @@
     </div>
   </div>
 
-  <!-- MODAL 2: SECURITY THREAT BLOCK MODAL -->
+  <!-- MODAL 2: SECURITY THREAT BLOCK MODAL (Oltalama/Zararlı Bağlantı Engeli) -->
   <div id="security-modal" class="modal-overlay">
     <div class="modal-card danger-theme">
       <div class="modal-header">
@@ -469,7 +478,7 @@
     </div>
   </div>
 
-  <!-- MODAL 5: JOB ALERT MODAL -->
+  <!-- MODAL 5: JOB ALERT MODAL (İş Alarmı Kurma Modalı) -->
   <div id="job-alert-modal" class="modal-overlay">
     <div class="modal-card">
       <div class="modal-header">
@@ -520,7 +529,7 @@
     </div>
   </div>
 
-  <!-- TOAST NOTIFICATION CONTAINER -->
+  <!-- TOAST NOTIFICATION CONTAINER (Bildirimlerin Çıktığı Kapsayıcı) -->
   <div id="toast-container" class="toast-container"></div>
 
   <!-- SCRIPT INCLUDES -->

@@ -1,26 +1,35 @@
 /* ============================================================
    FRONTEND/STYLE.CSS - NSosyal İnovasyon Platformu
    TEKNOFEST 2026 - Modern Dark Theme Architecture
+   
+   Bu dosya, platformun tüm arayüz bileşenlerinin (UI) görsel tasarımlarını, 
+   renk paletlerini ve mizanpajını (layout) barındıran CSS dosyasıdır.
    ============================================================ */
 
+/* CSS Değişkenleri (Global Değişkenler)
+   Proje genelinde tutarlı bir renk ve tema kullanmak için oluşturulmuştur. 
+   Dark (Karanlık) tema renkleri tanımlıdır. */
 :root {
-  --bg-dark: #0B0F17;
-  --bg-card: #151C2C;
-  --bg-hover: #1E293B;
-  --border: #232F48;
-  --text-main: #F8FAFC;
-  --text-secondary: #94A3B8;
-  --text-muted: #64748B;
-  --accent-blue: #2563EB;
-  --accent-blue-hover: #1D4ED8;
-  --accent-blue-light: #60A5FA;
-  --accent-purple: #7C3AED;
+  --bg-dark: #0B0F17; /* Ana arkaplan rengi (Çok koyu mavi/siyah) */
+  --bg-card: #151C2C; /* Kartların (Post, Job vb.) arkaplan rengi */
+  --bg-hover: #1E293B; /* Üzerine gelindiğinde (hover) gösterilecek renk */
+  --border: #232F48; /* Genel kenarlık (border) rengi */
+  --text-main: #F8FAFC; /* Ana okunabilir beyaz metin rengi */
+  --text-secondary: #94A3B8; /* İkincil, daha soluk metin rengi */
+  --text-muted: #64748B; /* Pasif veya daha az önemli metin rengi */
+  --accent-blue: #2563EB; /* Platformun ana tema rengi (Mavi) */
+  --accent-blue-hover: #1D4ED8; /* Buton hover mavi tonu */
+  --accent-blue-light: #60A5FA; /* Açık mavi vurgular */
+  --accent-purple: #7C3AED; /* İkincil tema rengi (Mor - AI vb. için) */
   --accent-purple-light: #A78BFA;
-  --accent-green: #059669;
-  --accent-red: #DC2626;
-  --accent-yellow: #D97706;
+  --accent-green: #059669; /* Başarı ve doğrulama renkleri */
+  --accent-red: #DC2626; /* Hata ve uyarılarda kullanılan renk */
+  --accent-yellow: #D97706; /* Dikkat gerektiren yerlerde */
 }
 
+/* Evrensel Sıfırlama (Reset)
+   Tarayıcıların varsayılan margin ve padding değerlerini sıfırlar, 
+   kutu modelini border-box olarak ayarlar. */
 * {
   box-sizing: border-box;
   margin: 0;
@@ -28,13 +37,16 @@
   font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
+/* Sayfanın gövde (Body) ayarları */
 body {
   background-color: var(--bg-dark);
   color: var(--text-main);
   min-height: 100vh;
-  overflow-x: hidden;
+  overflow-x: hidden; /* Yatay kaydırmayı engeller */
 }
 
+/* Ana Uygulama Düzeni (App Layout)
+   Sayfayı esnek (flex) bir yapıya oturtur ve maksimum genişliği sınırlar. */
 .app-layout {
   display: flex;
   min-height: 100vh;
